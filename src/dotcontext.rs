@@ -121,4 +121,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
+    pub fn is_empty_set(&self) -> bool{
+        self.dc.is_empty()
+    }
 }
