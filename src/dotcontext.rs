@@ -1,14 +1,18 @@
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
 
 /// Tries to optimize mapping.
 /// Source: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DotContext<K: PartialEq + Eq + Hash + Clone + Debug> {
-    pub cc: HashMap<K, i64>,   // Compact Causal Context
-    pub dc: HashSet<(K, i64)>, // Dot Cloud
+    /// Compact Causal Context
+    pub cc: HashMap<K, i64>,           
+    /// Dot Cloud
+    pub dc: HashSet<(K, i64)>,         
+    /// Dot Translation Cloud
+    pub dtc: HashSet<(K, i64, K, i64)>, 
 }
 
 impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
@@ -16,6 +20,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         Self {
             cc: HashMap::new(),
             dc: HashSet::new(),
+            dtc: HashSet::new(),
         }
     }
 
@@ -31,13 +36,38 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         return false;
     }
 
-    /// Creates a new dot considering that the dots are already compact.
+    /// Gets the maximum value associated to an id, considering that it's not compacted. 
+    pub fn get_key_val(&self, id: &K) -> i64 {
+        let mut max_val = self.cc.get(id).unwrap_or(&0);
+        for (dc_id, dc_val) in self.dc.iter() {
+            if id == dc_id {
+                max_val = max(max_val, dc_val);
+            }
+        }
+        *max_val
+    }
+
+    /// Cleans the entries of a specific id. 
+    /// Attention: Translations are not removed.
+    pub fn set_empty_self(&mut self, id: &K) {
+        self.cc
+            .entry(id.clone())
+            .and_modify(|v| *v = 0)
+            .or_insert(0); // Reset cc to zero
+        self.dc = self.dc.drain().filter(|(key, _)| key != id).collect(); // Remove id's entries
+    }
+
+    /// Creates a new dot considering that the dots are compated.
     pub fn makedot(&mut self, id: &K) -> (K, i64) {
         match self.cc.get_mut(id) {
             // No entry, then create one.
-            None => {self.cc.insert(id.clone(), 1);},
+            None => {
+                self.cc.insert(id.clone(), 1);
+            }
             // There is an entry, then update it.
-            Some(v) => {*v += 1;}
+            Some(v) => {
+                *v += 1;
+            }
         }
         return (id.clone(), self.cc.get(id).unwrap().clone());
     }
@@ -52,14 +82,30 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
+    /// Transform translations with values less than n in dc elements.
+    pub fn remove_dtdot(&mut self, target_id: &K, target_n: &i64) {
+        self.dtc = self
+            .dtc
+            .drain()
+            .filter(|(id, n, _, _)| id == target_id && n <= target_n )
+            .collect();
+    }
+
+    /// Create a dot translation and add it to the dot cloud and dot translation cloud.
+    pub fn make_dtdot(&mut self, id: &K, n: i64) ->(K, i64, K, i64) {
+        let (new_id, new_n) = self.makedot(id);
+        let dtr = (new_id, new_n, id.clone(), n);
+        self.dtc.insert(dtr.clone());
+        dtr
+    }
+
     pub fn join(&mut self, other: &Self) {
         for (other_k, &other_val) in other.cc.iter() {
-            
             match self.cc.get_mut(&other_k) {
-                // No previous record, then insert. 
+                // No previous record, then insert.
                 None => {
                     self.cc.insert(other_k.clone(), other_val);
-                }, 
+                }
                 // Get maximum between both.
                 Some(self_val) => {
                     *self_val = max(*self_val, other_val);
@@ -71,7 +117,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         self.compact();
     }
 
-    /// Performs the union between the self.dc and the one received. 
+    /// Performs the union between the self.dc and the one received.
     fn union_dc(&mut self, dc: &HashSet<(K, i64)>) {
         for (id, val) in dc.iter() {
             self.dc.insert((id.clone(), val.clone()));
@@ -90,7 +136,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
                         // No CC entry.
                         None => {
                             // If starts, with 1 (not decoupled), can compact.
-                            if *dc_count == 1 { 
+                            if *dc_count == 1 {
                                 self.cc.insert(id.clone(), *dc_count);
                                 repeat = true;
                                 return false; // Do not re-add it to dc.
@@ -121,7 +167,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
-    pub fn is_empty_set(&self) -> bool{
+    pub fn is_empty_set(&self) -> bool {
         self.dc.is_empty()
     }
 }

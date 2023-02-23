@@ -4,17 +4,16 @@ use std::hash::Hash;
 
 use crate::aworset_opt::AworsetOpt;
 use crate::dotcontext::DotContext;
-use crate::nodeId::NodeId;
+use crate::nodeId::{NodeId};
 
 #[derive(Debug)]
 pub struct HandoffAworSet<E: Eq + Clone + Hash + Debug + Display> {
     id: NodeId,
-    set: AworsetOpt<E>,
-    ck: i64,
+    aworset: AworsetOpt<E>,
     sck: i64,
     dck: i64,
-    slots: HashMap<NodeId, (i64, i64)>,
-    tokens: HashMap<(NodeId, NodeId), ((i64, i64), DotContext<NodeId>, HashSet<(NodeId, E, i32)>)>,
+    pub slots: HashMap<NodeId, (i64, i64)>,
+    tokens: HashMap<(NodeId, NodeId), ((i64, i64), DotContext<NodeId>, HashSet<(NodeId, E, i64)>)>,
     tier: i32
 }
 
@@ -22,8 +21,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     pub fn new(id: NodeId, tier: i32) -> Self {
         Self {
             id: id.clone(),
-            set: AworsetOpt::new(id.clone()),
-            ck: 0, 
+            aworset: AworsetOpt::new(id.clone()),
             sck: 0,
             dck: 0,
             slots: HashMap::new(),
@@ -33,20 +31,86 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     }
 
     /// Returns all the elements known by the node.
-    /// It must be the merge between values not sent yet (local) and the values in the lower tiers (val). 
+    /// Must be the combination of the elements in the token and in the set. 
     pub fn fetch(&self) -> HashSet<E>{
-        todo!()
+        let mut set: HashSet<E> = HashSet::new();
+        set.extend(self.get_token_elements());
+        set.extend(self.aworset.elements());
+        set
     }
 
-    pub fn add(&mut self, element: &E) {
+    /// Gets all the elements from the token
+    fn get_token_elements(&self) -> HashSet<E>{
+        let mut set: HashSet<E> = HashSet::new();
+        for (_, (_, _, entries)) in self.tokens.iter() {
+            for (_, element, _) in entries.iter(){
+                set.insert(element.clone());
+            }
+        }
+        set
+    }
+
+    /// Adds an element to the node.
+    pub fn add(&mut self, element: E) {
+        self.aworset.add(element);
+
     }
 
     pub fn create_slot(&mut self, other: &Self){
-        todo!()
+        if self.tier < other.tier && other.aworset.cc.get_key_val(&other.id) > 0 && !self.slots.contains_key(&other.id){
+            self.slots.insert(other.id.clone(), (other.sck, self.dck));
+            self.dck += 1;
+        }
     }
 
+    /// Creates a token in case there is a match slot in the other node.
     pub fn create_token(&mut self, other: &Self){
-        todo!()
+        // There is a slot for this node.
+        if let Some(ck) = other.slots.get(&self.id) {
+            if ck.0 == self.sck {
+                self.tokens.insert((self.id.clone(), other.id.clone()), (*ck, self.aworset.cc.clone(), self.aworset.set.clone()));  // Create token
+                self.empty_self();
+                self.sck += 1;
+            }   
+        }
     }
+
+    /// Set causal context and set associated to self.id to empty. 
+    fn empty_self(&mut self) {
+        self.aworset.cc.set_empty_self(&self.id);   // Empty causal context {A -> 0}.
+        self.aworset.set = self.aworset.set.drain().filter(|(nodeid, _, _)| *nodeid != self.id).collect();   // 
+    }
+
+    pub fn fill_slots(&mut self, other: &Self){
+        for ((_, t_dst), (t_ck, t_cc, t_set)) in other.tokens.iter(){
+            if *t_dst == self.id {
+                if let Some(&s_ck) = self.slots.get(&other.id) {
+                    if s_ck == *t_ck {
+                        self.translate_token_set(t_set, &other.id);
+                        self.slots.remove(&other.id);   // Fill correspondent slot.
+                    }
+                }
+            }
+        }
+
+    }
+
+    fn translate_token_set(&mut self, set: &HashSet<(NodeId, E, i64)>, target_id: &NodeId){
+        for triple in set.iter(){
+            self.translate_triple(triple.clone(), target_id);
+        }
+    }
+
+    /// Translates an element that has the target_id. 
+    /// # Example
+    /// An element that comes as (A, "i", 2), will be translated to (B, "i", n), considering that n is the value of the current node causal context.
+    /// cc: {nodeid -> 10}, for instance.
+    fn translate_triple(&mut self, (id, element, n): (NodeId, E, i64), target_id: &NodeId){
+        if id == *target_id {
+            self.aworset.add_dottr(id, element, n);
+        }
+    }
+
+
 
 }

@@ -34,8 +34,13 @@ where
     }
 
     pub fn add(&mut self, element: E) {
-        let dot = self.cc.makedot(&self.id);
-        self.set.insert((dot.0, element, dot.1));
+        let (id, val) = self.cc.makedot(&self.id);
+        self.set.insert((id, element, val));
+    }
+
+    pub fn add_dottr(&mut self, id: NodeId, element: E, n: i64){
+        let (new_id, new_val, _, _) = self.cc.make_dtdot(&id, n);
+        self.set.insert((new_id, element, new_val));
     }
 
     pub fn rm(&mut self, element: E) {
