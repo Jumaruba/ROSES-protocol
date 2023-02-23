@@ -99,3 +99,40 @@ pub fn create_token(){
     let res = "HandoffAworSet { id: A1, aworset: AworsetOpt { id: A1, set: {}, cc: DotContext { cc: {A1: 0}, dc: {}, dtc: {} } }, sck: 1, dck: 0, slots: {}, tokens: {(A1, B1): ((0, 0), DotContext { cc: {A1: 1}, dc: {}, dtc: {} }, {(A1, \"i\", 1)})}, tier: 1 }";
     assert_eq!(curr, res);
 }
+
+#[test]
+pub fn fill_slots(){
+    // Given
+    let mut src : HandoffAworSet<String> = HandoffAworSet::new(id("A"), 1);
+    let mut dst: HandoffAworSet<String> = HandoffAworSet::new(id("B"), 0);
+    src.add("i".to_string());
+
+    // When 
+    dst.create_slot(&src);
+    src.create_token(&dst);
+    dst.fill_slots(&src);
+
+    // Then
+    let curr = format!("{:?}", dst);
+    let res = "HandoffAworSet { id: B1, aworset: AworsetOpt { id: B1, set: {(A1, \"i\", 1)}, cc: DotContext { cc: {A1: 1}, dc: {}, dtc: {(A1, 1, A1, 1)} } }, sck: 0, dck: 1, slots: {}, tokens: {}, tier: 0 }";
+    assert_eq!(curr, res);
+}
+
+#[test]
+pub fn discard_tokens(){
+    // Given
+    let mut src : HandoffAworSet<String> = HandoffAworSet::new(id("A"), 1);
+    let mut dst: HandoffAworSet<String> = HandoffAworSet::new(id("B"), 0);
+    src.add("i".to_string());
+
+    // When 
+    dst.create_slot(&src);
+    src.create_token(&dst);
+    dst.fill_slots(&src);
+    src.discard_tokens(&dst);
+
+    // Then
+    let curr = format!("{:?}", src);
+    let res = "HandoffAworSet { id: A1, aworset: AworsetOpt { id: A1, set: {}, cc: DotContext { cc: {A1: 0}, dc: {}, dtc: {} } }, sck: 1, dck: 0, slots: {}, tokens: {}, tier: 1 }";
+    assert_eq!(curr, res);
+}

@@ -76,13 +76,14 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     }
 
     /// Set causal context and set associated to self.id to empty. 
+    /// But the dot translation cloud remains intact.
     fn empty_self(&mut self) {
         self.aworset.cc.set_empty_self(&self.id);   // Empty causal context {A -> 0}.
         self.aworset.set = self.aworset.set.drain().filter(|(nodeid, _, _)| *nodeid != self.id).collect();   // 
     }
 
     pub fn fill_slots(&mut self, other: &Self){
-        for ((_, t_dst), (t_ck, t_cc, t_set)) in other.tokens.iter(){
+        for ((_, t_dst), (t_ck, _, t_set)) in other.tokens.iter(){
             if *t_dst == self.id {
                 if let Some(&s_ck) = self.slots.get(&other.id) {
                     if s_ck == *t_ck {
@@ -112,5 +113,27 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     }
 
 
+    /// Discards a slot that can never be filled, since sck is higher than the one marked in the slot.
+    pub fn discard_slot(&mut self, other: &Self) {
+        if let Some(&(src, _)) = self.slots.get(&other.id) {
+            if other.sck > src {
+                self.slots.remove(&other.id);
+            }
+        }
+    }
 
+    pub fn discard_tokens(&mut self, other: &Self){
+        let token = self.tokens.drain()
+            .filter(|((src,dst), ((_, dck), _, _))| {
+                !(*dst == other.id && match other.slots.get(&src) {
+                    Some(&(_, d)) =>  d > *dck, 
+                    None => other.dck > *dck
+            })
+        }).collect();
+        self.tokens = token;
+    }
+
+    fn aggregate(){
+
+    }
 }
