@@ -49,37 +49,26 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
         }
         set
     }
-/*
+
     /// Adds an element to the node.
     pub fn add(&mut self, element: E) {
-        self.aworset.add(element);
+        self.aworset.add(element, self.sck);
 
     }
 
     pub fn create_slot(&mut self, other: &Self){
-        if self.tier < other.tier && other.aworset.cc.get_key_val(&other.id) > 0 && !self.slots.contains_key(&other.id){
-            self.slots.insert(other.id.clone(), (other.sck, self.dck));
-            self.dck += 1;
-        }
+        todo!()
     }
 
     /// Creates a token in case there is a match slot in the other node.
     pub fn create_token(&mut self, other: &Self){
-        // There is a slot for this node.
-        if let Some(ck) = other.slots.get(&self.id) {
-            if ck.0 == self.sck {
-                self.tokens.insert((self.id.clone(), other.id.clone()), (*ck, self.aworset.cc.clone(), self.aworset.set.clone()));  // Create token
-                self.empty_self();
-                self.sck += 1;
-            }   
-        }
+        todo!()
     }
 
     /// Set causal context and set associated to self.id to empty. 
     /// But the dot translation cloud remains intact.
     fn empty_self(&mut self) {
-        self.aworset.cc.set_empty_self(&self.id);   // Empty causal context {A -> 0}.
-        self.aworset.set = self.aworset.set.drain().filter(|(nodeid, _, _)| *nodeid != self.id).collect();   // 
+        todo!()
     }
 
     pub fn fill_slots(&mut self, other: &Self){
@@ -97,9 +86,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     }
 
     fn translate_token_set(&mut self, set: &HashSet<(NodeId, E, i64)>, target_id: &NodeId){
-        for triple in set.iter(){
-            self.translate_triple(triple.clone(), target_id);
-        }
+        todo!()
     }
 
 
@@ -135,5 +122,5 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
         if self.tier >= other.tier {
             
         }
-    }*/
+    }
 }
