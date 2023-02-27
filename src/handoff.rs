@@ -49,7 +49,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
         }
         set
     }
-
+/*
     /// Adds an element to the node.
     pub fn add(&mut self, element: E) {
         self.aworset.add(element);
@@ -102,15 +102,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
         }
     }
 
-    /// Translates an element that has the target_id. 
-    /// # Example
-    /// An element that comes as (A, "i", 2), will be translated to (B, "i", n), considering that n is the value of the current node causal context.
-    /// cc: {nodeid -> 10}, for instance.
-    fn translate_triple(&mut self, (id, element, n): (NodeId, E, i64), target_id: &NodeId){
-        if id == *target_id {
-            self.aworset.add_dottr(id, element, n);
-        }
-    }
 
 
     /// Discards a slot that can never be filled, since sck is higher than the one marked in the slot.
@@ -122,6 +113,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
         }
     }
 
+    /// Discard tokens that were already used or are out of date.
     pub fn discard_tokens(&mut self, other: &Self){
         let token = self.tokens.drain()
             .filter(|((src,dst), ((_, dck), _, _))| {
@@ -133,7 +125,15 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
         self.tokens = token;
     }
 
-    fn aggregate(){
+    /// Updates the values in set and cc. 
+    pub fn aggregate(&mut self, other: &Self){ 
 
     }
+
+    /// Applies translatiosn that came from the other node. 
+    pub fn translate(&mut self, other: &Self){
+        if self.tier >= other.tier {
+            
+        }
+    }*/
 }

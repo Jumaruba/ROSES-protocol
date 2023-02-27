@@ -22,6 +22,8 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     }
 
     /// Verifies if the received argument was already seen.
+    /// # Arguments
+    /// - d: A triple as (id, sck, counter). 
     pub fn dotin(&self, d: &(K, i64, i64)) -> bool {
         if let Some(&v) = self.cc.get(&(d.0.clone(), d.1)) {
             if d.1 <= v {
