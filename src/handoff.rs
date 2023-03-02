@@ -36,7 +36,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     /// Returns all the elements known by the node.
     /// Must be the combination of the elements in the token and in the set.
     pub fn fetch(&self) -> HashSet<E> {
-        todo!()
+        let mut local_elements = self.local_state.elements();
+        local_elements.extend(self.global_state.elements());
+        local_elements
     }
 
     /// Gets all the elements from the token

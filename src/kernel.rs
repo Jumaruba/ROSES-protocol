@@ -29,7 +29,7 @@ where
     
     /// TODO: to support self and other sets;
     pub fn elements(&self) -> HashSet<E>{
-        todo!()
+        self.set.iter().map(|(_, triple)| triple.0.clone()).collect()
     }
 
     pub fn add(&mut self, element: E, sck: i64) {
