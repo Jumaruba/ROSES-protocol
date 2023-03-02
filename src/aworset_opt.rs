@@ -4,13 +4,15 @@ use std::fmt::Debug;
 use crate::{NodeId, DotContext};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+
+// TODO: this gonna be the kernel 
 pub struct AworsetOpt<E>
 where
     E: Eq + Display + Clone + Hash + Debug,
 {
     pub id: NodeId,
     pub set: HashSet<(NodeId, E, i64, i64)>,   
-    pub cc: DotContext<NodeId>, // Equivalent to the cc in aworset.rs
+    pub cc: DotContext<NodeId>, // Change this to a HashMap. 
     pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>    // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst) 
 }
 
@@ -47,7 +49,7 @@ where
         }).collect();
     }
 
-    pub fn join(&mut self, other: &Self){
+    pub fn join(&mut self, other: &mut Self){
         // Intersentions and elements not known by other.
         self.set = self.set.drain().filter(|v|
             other.set.contains(v) || !other.cc.dotin(&(v.0.clone(), v.2, v.3)))

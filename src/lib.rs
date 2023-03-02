@@ -1,5 +1,5 @@
 pub mod dotcontext;
-use dotcontext::DotContext;
+use dotcontext::DotContext as DotContext;
 
 pub mod aworset_opt;
 use aworset_opt::AworsetOpt;

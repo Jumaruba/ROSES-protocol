@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use crate::aworset_opt::AworsetOpt;
-use crate::dotcontext::DotContext;
+use crate::DotContext;
 use crate::nodeId::{NodeId};
 
 #[derive(Debug)]

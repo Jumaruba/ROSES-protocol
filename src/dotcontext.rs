@@ -1,3 +1,4 @@
+use priority_queue::PriorityQueue;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
@@ -7,53 +8,66 @@ use std::hash::Hash;
 /// Source: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DotContext<K: PartialEq + Eq + Hash + Clone + Debug> {
-    /// Compact Causal Context (id, source clock, counter)
-    pub cc: HashMap<(K, i64), i64>,           
-    /// Dot Cloud (id, source clock, counter)
-    pub dc: HashSet<(K, i64, i64)>,         
+    pub cc: HashMap<K, HashMap<i64, i64>>, // Compact Context. {id -> {sck -> tag}}
+    pub dc: HashMap<K, HashSet<(i64, i64)>>, // Dot cloud. { id -> {(sck, tag)}}
 }
 
 impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     pub fn new() -> Self {
         Self {
             cc: HashMap::new(),
-            dc: HashSet::new(),
+            dc: HashMap::new(),
         }
     }
 
     /// Verifies if the received argument was already seen.
     /// # Arguments
-    /// - d: A triple as (id, sck, counter). 
+    /// - d: A triple as (id, sck, counter).
+    ///
+    /// # Explanation
+    /// Checks if the element was already computed in cc.
+    /// Case not, check in dc.
+    /// !NOTE to test
     pub fn dotin(&self, d: &(K, i64, i64)) -> bool {
-        if let Some(&v) = self.cc.get(&(d.0.clone(), d.1)) {
-            if d.1 <= v {
-                return true;
+        if let Some(hash) = self.cc.get(&d.0) {
+            if let Some(val) = hash.get(&d.1) {
+                if val >= &d.2 {
+                    return true;
+                }
             }
-        } else if let Some(_) = self.dc.get(&d) {
-            return true;
         }
-        return false;
+        if let Some(set) = self.dc.get(&d.0) {
+            return set.contains(&(d.1, d.2));
+        }
+
+        false
     }
 
     /// Creates a new dot considering that the dots are compacted.
+    /// !NOTE to test
     pub fn makedot(&mut self, id: &K, sck: i64) -> (K, i64, i64) {
-        let key = (id.clone(), sck);
-        match self.cc.get_mut(&key) {
-            // No entry, then create one.
+        let mut curr_tag: i64 = 1;
+        match self.cc.get_mut(&id) {
+            Some(cc_hash) => {
+                cc_hash.entry(sck).and_modify(|val| *val +=1);
+                curr_tag = cc_hash[&sck];
+            },
             None => {
-                self.cc.insert(key.clone(), 1);
-            }
-            // There is an entry, then update it.
-            Some(v) => {
-                *v += 1;
+                self.cc.insert(id.clone(), HashMap::from([(sck, 1)]));
             }
         }
-        return (id.clone(), sck, self.cc.get(&key).unwrap().clone());
+        (id.clone(), sck, curr_tag)
     }
 
-    /// Adds a dot to the struct.
-    pub fn insert_dot(&mut self, dot: &(K, i64, i64), compact: Option<bool>) {
-        self.dc.insert(dot.clone());
+    /// Inserts an element in dc.
+    /// !NOTE to test
+    pub fn insert_dot(&mut self, id: &K, sck: i64, tag: i64, compact: Option<bool>) {
+        // Node knows the id.
+        if let Some(set) = self.dc.get_mut(id) {
+            set.insert((sck, tag));
+        } else {
+            self.dc.insert(id.clone(), HashSet::from([(sck, tag)]));
+        }
         match compact {
             Some(true) => self.compact(),
             Some(false) => return,
@@ -61,16 +75,18 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
+    /// TODO: to test
     pub fn join(&mut self, other: &Self) {
-        for (other_k, &other_val) in other.cc.iter() {
-            match self.cc.get_mut(&other_k) {
-                // No previous record, then insert.
-                None => {
-                    self.cc.insert(other_k.clone(), other_val);
-                }
-                // Get maximum between both.
-                Some(self_val) => {
-                    *self_val = max(*self_val, other_val);
+        for (id, other_hash) in other.cc.iter() {
+            for (sck, other_val) in other_hash.into_iter() {
+                // The id is at self.
+                if let Some(self_hash) = self.cc.get_mut(id) {
+                    self_hash
+                        .entry(*sck)
+                        .and_modify(|self_val| *self_val = max(self_val.clone(), other_val.clone()))
+                        .or_insert(*other_val);
+                } else {
+                    self.insert_dot(id, sck.clone(), other_val.clone(), Some(false));
                 }
             }
         }
@@ -79,57 +95,50 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         self.compact();
     }
 
-    /// Performs the union between the self.dc and the one received.
-    fn union_dc(&mut self, dc: &HashSet<(K, i64, i64)>) {
-        for (id, sck, val) in dc.iter() {
-            self.dc.insert((id.clone(), sck.clone(), val.clone()));
-        }
-    }
-
-    pub fn compact(&mut self) {
-        let mut repeat: bool;
-        loop {
-            repeat = false;
-            self.dc = self
-                .dc
-                .drain()
-                .filter(|(id, sck, dc_count)| {
-                    match self.cc.get_mut(&(id.clone(), sck.clone())) {
-                        // No CC entry.
-                        None => {
-                            // If starts, with 1 (not decoupled), can compact.
-                            if *dc_count == 1 {
-                                self.cc.insert((id.clone(), sck.clone()), *dc_count);
-                                repeat = true;
-                                return false; // Do not re-add it to dc.
-                            }
-                        }
-                        // There is already a CC entry.
-                        Some(cc_count) => {
-                            // Contiguos, compact.
-                            if *cc_count == *dc_count - 1 {
-                                *cc_count += 1;
-                                repeat = true;
-                                return false; // Do not re-add it to dc.
-                            }
-                            // Has dc_count is already considered in cc.
-                            else if *cc_count >= *dc_count {
-                                return false; // Do not re-add it to dc.
-                                              // No extra compact opportunities. Flag untoched.
-                            }
-                        }
-                    }
-                    return true; // cc_count <= dc_count.
-                })
-                .collect();
-
-            if !repeat {
-                break;
+    fn union_dc(&mut self, dc: &HashMap<K, HashSet<(i64, i64)>>) {
+        for (id, other_hash) in dc.iter() {
+            if let Some(self_hash) = self.dc.get(id) {
+                self_hash.union(other_hash);
+            } else {
+                self.dc.insert(id.clone(), other_hash.clone());
             }
         }
     }
 
-    pub fn is_empty_set(&self) -> bool {
-        self.dc.is_empty()
+    pub fn compact(&mut self) {
+        let mut repeat: bool = true;
+        while repeat {
+            repeat = false;
+            for (id, set) in self.dc.iter_mut() {
+                *set = set.drain().filter(|(sck, dc_tag)| {
+                    match self.cc.get_mut(&id) {
+                        Some(cc_hash) => {
+                            if let Some(cc_tag) = cc_hash.get_mut(sck) {
+                                if *cc_tag == dc_tag.clone() - 1 {
+                                    *cc_tag += 1;
+                                    repeat = true;
+                                    return false; // Do not re-add it to dc.
+                                } else if *cc_tag >= *dc_tag {
+                                    return false; // Dot not re-add it to dc.
+                                                  // Repeat flag remains the same.
+                                }
+                            } else if *dc_tag == 1 {
+                                repeat = true;
+                                cc_hash.insert(sck.clone(), 1);
+                                return false;
+                            }
+                        }
+                        None => {
+                            if *dc_tag == 1 {
+                                self.cc.insert(id.clone(), HashMap::from([(*sck, 1)]));
+                                repeat = true;
+                                return false; // Do not re-add it to dc.
+                            }
+                        }
+                    }
+                    return true;
+                }).collect();
+            }
+        }
     }
 }
