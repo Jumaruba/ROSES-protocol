@@ -8,8 +8,8 @@ use std::hash::Hash;
 /// Source: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DotContext<K: PartialEq + Eq + Hash + Clone + Debug> {
-    pub cc: HashMap<K, HashMap<i64, i64>>, // Compact Context. {id -> {sck -> tag}}
-    pub dc: HashMap<K, HashSet<(i64, i64)>>, // Dot cloud. { id -> {(sck, tag)}}
+    pub cc: HashMap<K, HashMap<i64, i64>>,      // Compact Context. {id -> {sck -> tag}}
+    pub dc: HashMap<K, HashSet<(i64, i64)>>,    // Dot cloud. { id -> {(sck, tag)}}
 }
 
 impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
@@ -140,5 +140,10 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
                 }).collect();
             }
         }
+    }
+
+    /// Verifies if the id is known.
+    pub fn contains_id(&self, id: &K) -> bool {
+        return self.cc.contains_key(id) || self.dc.contains_key(id);
     }
 }
