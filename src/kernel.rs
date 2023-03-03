@@ -30,6 +30,10 @@ where
         }
     }
 
+    /// Removes all the entries related to the id. 
+    pub fn remove_id(&mut self, id: &NodeId) {
+        self.set.remove(id);
+    }
     pub fn get_last_tag(&self, sck: i64) -> i64 {
         todo!()
     }

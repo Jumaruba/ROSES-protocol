@@ -26,7 +26,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     /// # Explanation
     /// Checks if the element was already computed in cc.
     /// Case not, check in dc.
-    /// !NOTE to test
+    /// TODO: to test
     pub fn dotin(&self, d: &(K, i64, i64)) -> bool {
         if let Some(hash) = self.cc.get(&d.0) {
             if let Some(val) = hash.get(&d.1) {
@@ -166,8 +166,19 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
-    /// Verifies if the id is known.
-    pub fn contains_id(&self, id: &K) -> bool {
-        return self.cc.contains_key(id) || self.dc.contains_key(id);
+    /// TODO: to test
+    pub fn remove_id(&mut self, id: &K) {
+        self.cc.remove(id);
+        self.dc.remove(id);
+    }
+
+    /// TODO: test
+    /// Get the value in the cc. If the entry doesn't exists, return 0.
+    pub fn get_n(&self, id: &K, sck: &i64) -> i64 {
+        self
+            .cc
+            .get(id)
+            .and_then(|hash| hash.get(sck))
+            .unwrap_or(&0).clone()
     }
 }

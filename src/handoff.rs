@@ -10,7 +10,7 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     id: NodeId,
     kernel: Kernel<E>, // Stores information received from lower tiers.
     sck: i64,          // Source clock.
-    pub dck: i64,          // Destination clock.
+    pub dck: i64,      // Destination clock.
     pub slots: HashMap<NodeId, (i64, i64)>, // Slots {id -> (sck, dck)}
     tokens: HashMap<(NodeId, NodeId), ((i64, i64), i64, HashSet<(i64, i64, E)>)>, // (sck, dck, tag, (sck, tag, E))
     pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
@@ -49,42 +49,42 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     /// Creates a slot.
     pub fn create_slot(&mut self, other: &Self) {
-        if self.tier < other.tier && other.kernel.set.contains_key(&other.id) && !self.slots.contains_key(&other.id) {
+        // can be optimized to check only the other.kernel.set.
+        if self.tier < other.tier
+            && other.kernel.cc.cc.contains_key(&other.id)
+            && !self.slots.contains_key(&other.id)
+        {
             self.slots.insert(other.id.clone(), (other.sck, self.dck));
             self.dck += 1;
         }
     }
 
     /// Creates a token in case there is a match slot in the other node.
-    /// TODO: Test
+    /// To test
     pub fn create_token(&mut self, other: &Self) {
-        todo!()
-    }
-
-    /// Set causal context and set associated to self.id to empty.
-    fn empty_self(&mut self) {
-        self.kernel = Kernel::new(&self.id, self.sck);
-    }
-
-    pub fn fill_slots(&mut self, other: &Self) {
-        for ((src, dst), (t_ck, t_n, t_e)) in other.tokens.iter() {
-            if *dst == self.id {
-                self.slots
-                    .entry(other.id.clone())
-                    .and_modify(|ck| if ck == t_ck {});
-            }
+        if other.slots.contains_key(&self.id) && other.slots[&self.id].0 == self.sck {
+            let ck = other.slots[&self.id];
+            let n = self.kernel.cc.get_n(&self.id, &self.sck);
+            let set = self
+                .kernel
+                .set
+                .get(&self.id)
+                .unwrap_or(&HashSet::new())
+                .clone();
+            self.tokens
+                .insert((self.id.clone(), other.id.clone()), (ck, n, set));
+            self.kernel.remove_id(&self.id);
+            self.sck += 1;
         }
+    }
+    pub fn fill_slots(&mut self, other: &Self) {
+        todo!()
     }
 
     /// Merges the tokens elements with the actual state.
     /// A correct kernel contains only elements created in the source node.
     fn add_tokens(&mut self, other: &Self) {
-        if let Some(set) = other.kernel.set.get(&other.id) {
-            for triple in set {
-                let (_, tag_dst, _) = self.add(triple.2.clone());
-                self.create_translation(&other.id, triple, tag_dst);
-            }
-        }
+        todo!()
     }
 
     fn create_translation(&mut self, other_id: &NodeId, triple: &(i64, i64, E), tag_dst: i64) {
@@ -100,11 +100,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     /// Discards a slot that can never be filled, since sck is higher than the one marked in the slot.
     pub fn discard_slot(&mut self, other: &Self) {
-        if let Some(&(src, _)) = self.slots.get(&other.id) {
-            if other.sck > src {
-                self.slots.remove(&other.id);
-            }
-        }
+        todo!()
     }
 
     /// Discard tokens that were already used or are out of date.

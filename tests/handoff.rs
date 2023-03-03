@@ -24,3 +24,19 @@ pub fn create_slot() {
     assert_eq!(h_2.dck, 2);
     assert_eq!(h_2.slots, HashMap::from([(id("A"), (1,1))]));
 }
+
+#[test]
+pub fn create_token(){
+    // Given
+    let mut h_1: Handoff<i32> = Handoff::new(id("A"), 1);
+    h_1.dck = 1; 
+    h_1.slots = HashMap::from([(id("A"), (1,1))]);
+    
+    let mut h_2: Handoff<i32> = Handoff::new(id("B"), 0);
+
+    // When 
+    h_2.create_token(&h_1); 
+    // Then     
+    assert_eq!(val(&h_2), "");
+
+}
