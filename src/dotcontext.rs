@@ -8,8 +8,8 @@ use std::hash::Hash;
 /// Source: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DotContext<K: PartialEq + Eq + Hash + Clone + Debug> {
-    pub cc: HashMap<K, HashMap<i64, i64>>,      // Compact Context. {id -> {sck -> tag}}
-    pub dc: HashMap<K, HashSet<(i64, i64)>>,    // Dot cloud. { id -> {(sck, tag)}}
+    pub cc: HashMap<K, HashMap<i64, i64>>, // Compact Context. {id -> {sck -> tag}}
+    pub dc: HashMap<K, HashSet<(i64, i64)>>, // Dot cloud. { id -> {(sck, tag)}}
 }
 
 impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
@@ -44,19 +44,33 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     }
 
     /// Creates a new dot considering that the dots are compacted.
-    /// !NOTE to test
+    /// Gets the corresponsing n in self.cc and increment it. 
+    /// # Example
+    /// ```
+    /// use thesis_code::dotcontext::DotContext;
+    /// let mut dotctx: DotContext<String> = DotContext::new();
+    /// dotctx.makedot(&"A".to_string(), 1);
+    /// dotctx.makedot(&"A".to_string(), 1);
+    /// let dot_3 = dotctx.makedot(&"A".to_string(), 3);
+    /// let res_dot = ("A".to_string(), 3, 1); // (E,sck,n)
+    /// let res_dotctx = "DotContext { cc: {\"A\": {3: 1, 1: 2}}, dc: {} }";
+    /// let format_dotctx = format!("{:?}", dotctx);
+    /// assert_eq!(dot_3, res_dot);
+    /// assert_eq!(*dotctx.cc.get(&"A".to_string()).unwrap().get(&3).unwrap(), 1);
+    /// assert_eq!(*dotctx.cc.get(&"A".to_string()).unwrap().get(&1).unwrap(), 2);
+    /// ```
     pub fn makedot(&mut self, id: &K, sck: i64) -> (K, i64, i64) {
-        let mut curr_tag: i64 = 1;
-        match self.cc.get_mut(&id) {
-            Some(cc_hash) => {
-                cc_hash.entry(sck).and_modify(|val| *val +=1);
-                curr_tag = cc_hash[&sck];
-            },
-            None => {
-                self.cc.insert(id.clone(), HashMap::from([(sck, 1)]));
-            }
-        }
-        (id.clone(), sck, curr_tag)
+        // Get hash (sck, n) or create it. 
+        let cc_hash = self
+            .cc
+            .entry(id.clone())
+            .or_insert(HashMap::from([(sck, 0)]));
+        // Get n or create it. 
+        cc_hash.entry(sck)
+            .and_modify(|val| *val += 1)
+            .or_insert(1);
+
+        (id.clone(), sck, cc_hash[&sck])
     }
 
     /// Inserts an element in dc.
@@ -110,34 +124,37 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         while repeat {
             repeat = false;
             for (id, set) in self.dc.iter_mut() {
-                *set = set.drain().filter(|(sck, dc_tag)| {
-                    match self.cc.get_mut(&id) {
-                        Some(cc_hash) => {
-                            if let Some(cc_tag) = cc_hash.get_mut(sck) {
-                                if *cc_tag == dc_tag.clone() - 1 {
-                                    *cc_tag += 1;
+                *set = set
+                    .drain()
+                    .filter(|(sck, dc_tag)| {
+                        match self.cc.get_mut(&id) {
+                            Some(cc_hash) => {
+                                if let Some(cc_tag) = cc_hash.get_mut(sck) {
+                                    if *cc_tag == dc_tag.clone() - 1 {
+                                        *cc_tag += 1;
+                                        repeat = true;
+                                        return false; // Do not re-add it to dc.
+                                    } else if *cc_tag >= *dc_tag {
+                                        return false; // Dot not re-add it to dc.
+                                                      // Repeat flag remains the same.
+                                    }
+                                } else if *dc_tag == 1 {
+                                    repeat = true;
+                                    cc_hash.insert(sck.clone(), 1);
+                                    return false;
+                                }
+                            }
+                            None => {
+                                if *dc_tag == 1 {
+                                    self.cc.insert(id.clone(), HashMap::from([(*sck, 1)]));
                                     repeat = true;
                                     return false; // Do not re-add it to dc.
-                                } else if *cc_tag >= *dc_tag {
-                                    return false; // Dot not re-add it to dc.
-                                                  // Repeat flag remains the same.
                                 }
-                            } else if *dc_tag == 1 {
-                                repeat = true;
-                                cc_hash.insert(sck.clone(), 1);
-                                return false;
                             }
                         }
-                        None => {
-                            if *dc_tag == 1 {
-                                self.cc.insert(id.clone(), HashMap::from([(*sck, 1)]));
-                                repeat = true;
-                                return false; // Do not re-add it to dc.
-                            }
-                        }
-                    }
-                    return true;
-                }).collect();
+                        return true;
+                    })
+                    .collect();
             }
         }
     }

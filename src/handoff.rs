@@ -8,12 +8,11 @@ use crate::nodeId::NodeId;
 #[derive(Debug)]
 pub struct HandoffAworSet<E: Eq + Clone + Hash + Debug + Display> {
     id: NodeId,
-    local_state: Kernel<E>,  // Stores information that was added locally.
-    global_state: Kernel<E>, // Stores information received from lower tiers.
-    sck: i64,                // Source clock.
-    dck: i64,                // Destination clock.
+    kernel: Kernel<E>, // Stores information received from lower tiers.
+    sck: i64,          // Source clock.
+    dck: i64,          // Destination clock.
     pub slots: HashMap<NodeId, (i64, i64)>, // Slots {id -> (sck, dck)}
-    tokens: HashMap<(NodeId, NodeId), ((i64, i64), Kernel<E>)>, // The kernel is tipically the local_state.
+    tokens: HashMap<(NodeId, NodeId), ((i64, i64), i64, HashSet<(i64,i64,E)>)>, // (sck, dck, tag, (sck, tag, E))
     pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
     tier: i32,
 }
@@ -22,8 +21,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     pub fn new(id: NodeId, tier: i32) -> Self {
         Self {
             id: id.clone(),
-            local_state: Kernel::new(&id),
-            global_state: Kernel::new(&id),
+            kernel: Kernel::new(&id, 0),
             sck: 0,
             dck: 0,
             slots: HashMap::new(),
@@ -36,9 +34,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     /// Returns all the elements known by the node.
     /// Must be the combination of the elements in the token and in the set.
     pub fn fetch(&self) -> HashSet<E> {
-        let mut local_elements = self.local_state.elements();
-        local_elements.extend(self.global_state.elements());
-        local_elements
+        todo!()
     }
 
     /// Gets all the elements from the token
@@ -47,46 +43,50 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     }
 
     /// Adds an element to the node.
-    pub fn add(&mut self, element: E) {
-        self.local_state.add(element, self.sck);
+    pub fn add(&mut self, element: E) -> (E, i64) {
+        self.kernel.add(element)
     }
 
     /// Creates a slot.
     /// TODO: test
     pub fn create_slot(&mut self, other: &Self) {
-        // Later this can be optimized. Do not look to cc, but to the set of the local_state.
-        if self.tier < other.tier
-            && self.local_state.cc.contains_id(&other.id)
-            && !self.slots.contains_key(&other.id)
-        {
-            self.slots.insert(other.id.clone(), (other.sck, self.dck));
-            self.dck += 1;
-        }
+        todo!()
     }
 
     /// Creates a token in case there is a match slot in the other node.
     /// TODO: Test
     pub fn create_token(&mut self, other: &Self) {
-        if let Some(&(sck, dck)) = other.slots.get(&self.id) {
-            if sck == self.sck {
-                let src_dst = (self.id.clone(), other.id.clone());
-                self.tokens.insert(src_dst, ((sck, dck), self.local_state.clone()));
-                self.sck += 1;
-            }
-        }
+        todo!()
     }
 
     /// Set causal context and set associated to self.id to empty.
     fn empty_self(&mut self) {
-        self.local_state = Kernel::new(&self.id);    
+        self.kernel = Kernel::new(&self.id, self.sck);
     }
 
     pub fn fill_slots(&mut self, other: &Self) {
-        todo!()
     }
 
-    fn translate_token_set(&mut self, set: &HashSet<(NodeId, E, i64)>, target_id: &NodeId) {
-        todo!()
+    /// Merges the tokens elements with the actual state.
+    /// A correct kernel contains only elements created in the source node.
+    fn add_tokens(&mut self, other: &Self) {
+        if let Some(set) = other.kernel.set.get(&other.id) {
+            for triple in set {
+                let (_, tag_dst) = self.add(triple.2.clone());
+                self.create_translation(&other.id, triple, tag_dst);
+            }
+        }
+    }
+
+    fn create_translation(&mut self, other_id: &NodeId, triple: &(i64, i64, E), tag_dst: i64) {
+        self.transl.insert((
+            other_id.clone(),
+            triple.0,
+            triple.1,
+            self.id.clone(),
+            self.sck,
+            tag_dst,
+        ));
     }
 
     /// Discards a slot that can never be filled, since sck is higher than the one marked in the slot.

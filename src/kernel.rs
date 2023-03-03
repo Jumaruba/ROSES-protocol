@@ -11,7 +11,7 @@ where
     E: Eq + Display + Clone + Hash + Debug,
 {
     pub id: NodeId,
-    pub set: HashMap<NodeId, (E, i64, i64)>,   
+    pub set: HashMap<NodeId, HashSet<(i64, i64, E)>>,   // Created as a Hash, because it's more effiecient to separate the self elements, from the others. Hash: (sck, tag, element). 
     pub cc: DotContext<NodeId>, // Change this to a HashMap. 
 }
 
@@ -19,20 +19,25 @@ impl<E> Kernel<E>
 where
     E: Eq + Display + Clone + Hash + Debug,
 {
-    pub fn new(id: &NodeId) -> Self {
+    pub fn new(id: &NodeId, sck: i64) -> Self {
         Self {
             id: id.clone(), 
             set: HashMap::new(),
             cc: DotContext::new(),
         }
     }
+
+    pub fn get_last_tag(&self, sck: i64) -> i64{
+        todo!()
+    }
     
     /// TODO: to support self and other sets;
     pub fn elements(&self) -> HashSet<E>{
-        self.set.iter().map(|(_, triple)| triple.0.clone()).collect()
+        todo!()
     }
 
-    pub fn add(&mut self, element: E, sck: i64) {
+    /// Adds an element and return the added entry.
+    pub fn add(&mut self, element: E) -> (E, i64) {
         todo!()
     }
 
