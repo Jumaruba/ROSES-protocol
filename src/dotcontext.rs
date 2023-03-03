@@ -44,7 +44,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     }
 
     /// Creates a new dot considering that the dots are compacted.
-    /// Gets the corresponsing n in self.cc and increment it. 
+    /// Gets the corresponsing n in self.cc and increment it.
     /// # Example
     /// ```
     /// use thesis_code::dotcontext::DotContext;
@@ -60,28 +60,37 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     /// assert_eq!(*dotctx.cc.get(&"A".to_string()).unwrap().get(&1).unwrap(), 2);
     /// ```
     pub fn makedot(&mut self, id: &K, sck: i64) -> (K, i64, i64) {
-        // Get hash (sck, n) or create it. 
+        // Get hash (sck, n) or create it.
         let cc_hash = self
             .cc
             .entry(id.clone())
             .or_insert(HashMap::from([(sck, 0)]));
-        // Get n or create it. 
-        cc_hash.entry(sck)
-            .and_modify(|val| *val += 1)
-            .or_insert(1);
+        // Get n or create it.
+        cc_hash.entry(sck).and_modify(|val| *val += 1).or_insert(1);
 
         (id.clone(), sck, cc_hash[&sck])
     }
 
     /// Inserts an element in dc.
-    /// !NOTE to test
+    /// If there is no entry for the id, it creates it. 
+    /// # Example
+    /// ```
+    /// use thesis_code::dotcontext::DotContext;
+    /// use std::collections::HashSet;
+    /// let mut dotctx: DotContext<String> = DotContext::new();
+    /// dotctx.insert_dot(&"A".to_string(), 1, 4, Some(false));
+    /// dotctx.insert_dot(&"A".to_string(), 1, 2, Some(false));
+    /// assert_eq!(dotctx.dc[&"A".to_string()], HashSet::from([(1,2), (1,4)]));
+    /// ```
+    /// 
     pub fn insert_dot(&mut self, id: &K, sck: i64, tag: i64, compact: Option<bool>) {
-        // Node knows the id.
-        if let Some(set) = self.dc.get_mut(id) {
-            set.insert((sck, tag));
-        } else {
-            self.dc.insert(id.clone(), HashSet::from([(sck, tag)]));
-        }
+        self.dc
+            .entry(id.clone())
+            .and_modify(|hash| {
+                hash.insert((sck, tag));
+            })
+            .or_insert(HashSet::from([(sck, tag)]));
+
         match compact {
             Some(true) => self.compact(),
             Some(false) => return,
