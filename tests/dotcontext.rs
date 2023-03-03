@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use thesis_code::dotcontext::DotContext;
 
@@ -77,3 +77,68 @@ pub fn insert_dot_2(){
 
 }
 
+/// Dotcontexts with empty intersection.
+#[test]
+pub fn join_1(){
+    // Given 
+    let mut dc_1: DotContext<String> = DotContext::new(); 
+    dc_1.cc = HashMap::from([("A".to_string(), HashMap::from([(1,3)]))]);
+    dc_1.dc = HashMap::from([("A".to_string(), HashSet::from([(1,2), (3,4)])), 
+        ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
+
+    let mut dc_2: DotContext<String> = DotContext::new(); 
+    dc_2.cc = HashMap::from([("C".to_string(), HashMap::from([(1,3)]))]);
+    dc_2.dc = HashMap::from([("D".to_string(), HashSet::from([(1,2), (3,4)])), 
+        ("E".to_string(), HashSet::from([(2,4), (3,5)]))]);
+
+    // When 
+    dc_1.join(&dc_2);
+
+    // Then 
+    let res_cc = HashMap::from([("A".to_string(), HashMap::from([(1,3)])), ("C".to_string(), HashMap::from([(1,3)]))]);
+    let res_dc = HashMap::from([("D".to_string(), HashSet::from([(1,2), (3,4)])), ("E".to_string(), HashSet::from([(2,4), (3,5)])), ("A".to_string(), HashSet::from([(3,4)])), ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
+    assert_eq!(dc_1.cc, res_cc);
+    assert_eq!(dc_1.dc, res_dc);
+}
+
+/// DotContexts with elements in common 
+#[test]
+pub fn join_2() {
+    // Given 
+    let mut dc_1: DotContext<String> = DotContext::new(); 
+    dc_1.cc = HashMap::from([("A".to_string(), HashMap::from([(1,3)]))]);
+    dc_1.dc = HashMap::from([("A".to_string(), HashSet::from([(1,2), (3,4)])), 
+        ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
+
+    let mut dc_2: DotContext<String> = DotContext::new(); 
+    dc_2.cc = HashMap::from([("C".to_string(), HashMap::from([(1,3)]))]);
+    dc_2.dc = HashMap::from([("A".to_string(), HashSet::from([(2,1), (3,4)])), 
+        ("E".to_string(), HashSet::from([(2,4), (3,5)]))]);
+
+    // When 
+    dc_1.join(&dc_2);
+
+    // Then 
+    let res_cc = HashMap::from([("A".to_string(), HashMap::from([(2,1),(1,3)])), ("C".to_string(), HashMap::from([(1,3)]))]);
+    let res_dc = HashMap::from([("E".to_string(), HashSet::from([(2,4), (3,5)])), ("A".to_string(), HashSet::from([(3,4)])), ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
+    assert_eq!(dc_1.cc, res_cc);
+    assert_eq!(dc_1.dc, res_dc);
+}
+
+/// Compact and add new element to cc.
+#[test]
+pub fn compact_1(){
+    let mut dc_1: DotContext<String> = DotContext::new(); 
+    dc_1.cc = HashMap::from([("A".to_string(), HashMap::from([(1,3)]))]);
+    dc_1.dc = HashMap::from([("A".to_string(), HashSet::from([(2,1), (3,4)])), 
+        ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
+
+    // When 
+    dc_1.compact();
+
+    // Then 
+    let res_cc = HashMap::from([("A".to_string(), HashMap::from([(2,1),(1,3)]))]);
+    let res_dc = HashMap::from([("A".to_string(), HashSet::from([(3,4)])), ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
+    assert_eq!(dc_1.cc, res_cc);
+    assert_eq!(dc_1.dc, res_dc);
+}

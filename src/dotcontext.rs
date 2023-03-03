@@ -1,4 +1,3 @@
-use priority_queue::PriorityQueue;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
@@ -72,7 +71,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     }
 
     /// Inserts an element in dc.
-    /// If there is no entry for the id, it creates it. 
+    /// If there is no entry for the id, it creates it.
     /// # Example
     /// ```
     /// use thesis_code::dotcontext::DotContext;
@@ -82,7 +81,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     /// dotctx.insert_dot(&"A".to_string(), 1, 2, Some(false));
     /// assert_eq!(dotctx.dc[&"A".to_string()], HashSet::from([(1,2), (1,4)]));
     /// ```
-    /// 
+    ///
     pub fn insert_dot(&mut self, id: &K, sck: i64, tag: i64, compact: Option<bool>) {
         self.dc
             .entry(id.clone())
@@ -98,19 +97,16 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
-    /// TODO: to test
+    /// Joins two dot contexts.
     pub fn join(&mut self, other: &Self) {
         for (id, other_hash) in other.cc.iter() {
-            for (sck, other_val) in other_hash.into_iter() {
-                // The id is at self.
-                if let Some(self_hash) = self.cc.get_mut(id) {
-                    self_hash
-                        .entry(*sck)
-                        .and_modify(|self_val| *self_val = max(self_val.clone(), other_val.clone()))
-                        .or_insert(*other_val);
-                } else {
-                    self.insert_dot(id, sck.clone(), other_val.clone(), Some(false));
-                }
+            for (sck, other_val) in other_hash.iter() {
+                self.cc
+                    .entry(id.clone())
+                    .or_insert(HashMap::new())
+                    .entry(*sck)
+                    .and_modify(|self_val| *self_val = max(self_val.clone(), other_val.clone()))
+                    .or_insert(*other_val);
             }
         }
 
@@ -120,11 +116,12 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
 
     fn union_dc(&mut self, dc: &HashMap<K, HashSet<(i64, i64)>>) {
         for (id, other_hash) in dc.iter() {
-            if let Some(self_hash) = self.dc.get(id) {
-                self_hash.union(other_hash);
-            } else {
-                self.dc.insert(id.clone(), other_hash.clone());
-            }
+            self.dc
+                .entry(id.clone())
+                .and_modify(|hash| {
+                    hash.extend(other_hash);
+                })
+                .or_insert(other_hash.clone());
         }
     }
 
