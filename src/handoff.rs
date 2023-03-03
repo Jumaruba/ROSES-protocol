@@ -6,24 +6,24 @@ use crate::kernel::Kernel;
 use crate::nodeId::NodeId;
 
 #[derive(Debug)]
-pub struct HandoffAworSet<E: Eq + Clone + Hash + Debug + Display> {
+pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     id: NodeId,
     kernel: Kernel<E>, // Stores information received from lower tiers.
     sck: i64,          // Source clock.
-    dck: i64,          // Destination clock.
+    pub dck: i64,          // Destination clock.
     pub slots: HashMap<NodeId, (i64, i64)>, // Slots {id -> (sck, dck)}
-    tokens: HashMap<(NodeId, NodeId), ((i64, i64), i64, HashSet<(i64,i64,E)>)>, // (sck, dck, tag, (sck, tag, E))
+    tokens: HashMap<(NodeId, NodeId), ((i64, i64), i64, HashSet<(i64, i64, E)>)>, // (sck, dck, tag, (sck, tag, E))
     pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
     tier: i32,
 }
 
-impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
+impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn new(id: NodeId, tier: i32) -> Self {
         Self {
             id: id.clone(),
             kernel: Kernel::new(&id, 0),
-            sck: 0,
-            dck: 0,
+            sck: 1,
+            dck: 1,
             slots: HashMap::new(),
             tokens: HashMap::new(),
             transl: HashSet::new(),
@@ -43,14 +43,16 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     }
 
     /// Adds an element to the node.
-    pub fn add(&mut self, element: E) -> (E, i64) {
-        self.kernel.add(element)
+    pub fn add(&mut self, element: E) -> (i64, i64, E) {
+        self.kernel.add(element, self.sck)
     }
 
     /// Creates a slot.
-    /// TODO: test
     pub fn create_slot(&mut self, other: &Self) {
-        todo!()
+        if self.tier < other.tier && other.kernel.set.contains_key(&other.id) && !self.slots.contains_key(&other.id) {
+            self.slots.insert(other.id.clone(), (other.sck, self.dck));
+            self.dck += 1;
+        }
     }
 
     /// Creates a token in case there is a match slot in the other node.
@@ -65,6 +67,13 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     }
 
     pub fn fill_slots(&mut self, other: &Self) {
+        for ((src, dst), (t_ck, t_n, t_e)) in other.tokens.iter() {
+            if *dst == self.id {
+                self.slots
+                    .entry(other.id.clone())
+                    .and_modify(|ck| if ck == t_ck {});
+            }
+        }
     }
 
     /// Merges the tokens elements with the actual state.
@@ -72,7 +81,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> HandoffAworSet<E> {
     fn add_tokens(&mut self, other: &Self) {
         if let Some(set) = other.kernel.set.get(&other.id) {
             for triple in set {
-                let (_, tag_dst) = self.add(triple.2.clone());
+                let (_, tag_dst, _) = self.add(triple.2.clone());
                 self.create_translation(&other.id, triple, tag_dst);
             }
         }

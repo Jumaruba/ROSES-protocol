@@ -125,6 +125,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
+    /// TODO: make more tests on this.
     pub fn compact(&mut self) {
         let mut repeat: bool = true;
         while repeat {
