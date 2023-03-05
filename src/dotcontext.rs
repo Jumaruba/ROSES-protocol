@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 /// Tries to optimize mapping.
-/// Source: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
+/// Inspired in: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DotContext<K: PartialEq + Eq + Hash + Clone + Debug> {
     pub cc: HashMap<K, HashMap<i64, i64>>, // Compact Context. {id -> {sck -> tag}}
@@ -19,14 +19,16 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
+    // --------------------------
+    // STANDARD FUNCTIONS 
+    // --------------------------
+
+    /// Verifies if there is information about a node. 
+    pub fn has_seen(&self, id: &K) ->  bool {
+        return self.cc.contains_key(id) || self.dc.contains_key(id);
+    }
+
     /// Verifies if the received argument was already seen.
-    /// # Arguments
-    /// - d: A triple as (id, sck, counter).
-    ///
-    /// # Explanation
-    /// Checks if the element was already computed in cc.
-    /// Case not, check in dc.
-    /// TODO: to test
     pub fn dotin(&self, d: &(K, i64, i64)) -> bool {
         if let Some(hash) = self.cc.get(&d.0) {
             if let Some(val) = hash.get(&d.1) {
@@ -41,6 +43,10 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
 
         false
     }
+ 
+    // --------------------------
+    // OPERATIONS
+    // --------------------------
 
     /// Creates a new dot considering that the dots are compacted.
     /// Gets the corresponsing n in self.cc and increment it.
@@ -114,16 +120,6 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         self.compact();
     }
 
-    fn union_dc(&mut self, dc: &HashMap<K, HashSet<(i64, i64)>>) {
-        for (id, other_hash) in dc.iter() {
-            self.dc
-                .entry(id.clone())
-                .and_modify(|hash| {
-                    hash.extend(other_hash);
-                })
-                .or_insert(other_hash.clone());
-        }
-    }
 
     /// TODO: make more tests on this.
     pub fn compact(&mut self) {
@@ -166,6 +162,12 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
+
+
+    // --------------------------
+    // UTILS
+    // --------------------------
+
     /// TODO: to test
     pub fn remove_id(&mut self, id: &K) {
         self.cc.remove(id);
@@ -180,5 +182,17 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
             .get(id)
             .and_then(|hash| hash.get(sck))
             .unwrap_or(&0).clone()
+    }
+
+
+    fn union_dc(&mut self, dc: &HashMap<K, HashSet<(i64, i64)>>) {
+        for (id, other_hash) in dc.iter() {
+            self.dc
+                .entry(id.clone())
+                .and_modify(|hash| {
+                    hash.extend(other_hash);
+                })
+                .or_insert(other_hash.clone());
+        }
     }
 }

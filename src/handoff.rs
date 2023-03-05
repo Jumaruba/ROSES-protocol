@@ -8,9 +8,9 @@ use crate::nodeId::NodeId;
 #[derive(Debug)]
 pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     id: NodeId,
-    kernel: Kernel<E>, // Stores information received from lower tiers.
-    sck: i64,          // Source clock.
-    pub dck: i64,      // Destination clock.
+    kernel: Kernel<E>, 
+    sck: i64,          
+    pub dck: i64,      
     pub slots: HashMap<NodeId, (i64, i64)>, // Slots {id -> (sck, dck)}
     tokens: HashMap<(NodeId, NodeId), ((i64, i64), i64, HashSet<(i64, i64, E)>)>, // (sck, dck, tag, (sck, tag, E))
     pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
@@ -21,7 +21,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn new(id: NodeId, tier: i32) -> Self {
         Self {
             id: id.clone(),
-            kernel: Kernel::new(&id, 0),
+            kernel: Kernel::new(&id),
             sck: 1,
             dck: 1,
             slots: HashMap::new(),
@@ -30,6 +30,10 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             tier,
         }
     }
+
+    // --------------------------
+    // OPERATIONS
+    // --------------------------
 
     /// Returns all the elements known by the node.
     /// Must be the combination of the elements in the token and in the set.
@@ -47,7 +51,28 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.kernel.add(element, self.sck)
     }
 
+    // --------------------------
+    // MERGE FUNCTIONS 
+    // --------------------------
+
+
     /// Creates a slot.
+    /// # Example
+    /// ```
+    /// use std::collections::HashMap;
+    /// use thesis_code::{handoff::Handoff, nodeId::NodeId};
+    /// // Given
+    /// let id_a = NodeId::new(1, "A".to_string());
+    /// let id_b = NodeId::new(1, "B".to_string());
+    /// let mut h_1: Handoff<i32> = Handoff::new(id_a.clone(), 1);
+    /// h_1.add(2);
+    /// let mut h_2: Handoff<i32> = Handoff::new(id_b, 0);
+    /// // When
+    /// h_2.create_slot(&h_1);
+    /// // Then
+    /// assert_eq!(h_2.dck, 2);
+    /// assert_eq!(h_2.slots, HashMap::from([(id_a, (1,1))]));
+    /// ```
     pub fn create_slot(&mut self, other: &Self) {
         // can be optimized to check only the other.kernel.set.
         if self.tier < other.tier
@@ -62,21 +87,26 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Creates a token in case there is a match slot in the other node.
     /// To test
     pub fn create_token(&mut self, other: &Self) {
+        todo!();
+        /*
         if other.slots.contains_key(&self.id) && other.slots[&self.id].0 == self.sck {
-            let ck = other.slots[&self.id];
-            let n = self.kernel.cc.get_n(&self.id, &self.sck);
+            let slot_ck = other.slots[&self.id];
+            let self_n = self.kernel.cc.get_n(&self.id, &self.sck);
+
             let set = self
                 .kernel
-                .set
+                .elems
                 .get(&self.id)
                 .unwrap_or(&HashSet::new())
                 .clone();
+
             self.tokens
-                .insert((self.id.clone(), other.id.clone()), (ck, n, set));
+                .insert((self.id.clone(), other.id.clone()), (slot_ck, self_n, set));
             self.kernel.remove_id(&self.id);
             self.sck += 1;
-        }
+        }*/
     }
+
     pub fn fill_slots(&mut self, other: &Self) {
         todo!()
     }
