@@ -40,7 +40,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// TODO: to test
     pub fn fetch(&self) -> HashSet<E> {
         let mut kernel_elems = self.get_kernel_elements();
-        kernel_elems.extend(self.get_kernel_elements());
+        kernel_elems.extend(self.get_token_elements());
         kernel_elems
     }
 
@@ -83,7 +83,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// Creates a token in case there is a match slot in the other node.
-    /// To test
+    /// TODO: to test
     pub fn create_token(&mut self, other: &Self) {
         todo!();
         /*
@@ -114,6 +114,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     fn add_tokens(&mut self, other: &Self) {
         todo!()
     }
+
 
     fn create_translation(&mut self, other_id: &NodeId, triple: &(i64, i64, E), tag_dst: i64) {
         self.transl.insert((
@@ -149,8 +150,13 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     // --------------------------
 
     /// Gets all the elements from the token
+    /// TODO: to test
     fn get_token_elements(&self) -> HashSet<E> {
-        todo!()
+        let mut res: HashSet<E> = HashSet::new();
+        for (_,(_,_,elems)) in self.tokens.iter(){
+            elems.iter().for_each(|(_,_,e)| {res.insert(e.clone());});
+        }
+        res
     }
 
     fn get_kernel_elements(&self) -> HashSet<E> {
