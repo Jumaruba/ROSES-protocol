@@ -39,7 +39,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Must be the combination of the elements in the token and set.
     /// TODO: to test
     pub fn fetch(&self) -> HashSet<E> {
-        let mut kernel_elems = self.get_kernel_elements();
+        let mut kernel_elems = self.kernel.elements();
         kernel_elems.extend(self.get_token_elements());
         kernel_elems
     }
@@ -50,6 +50,15 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.kernel.add(element, self.sck)
     }
 
+    /// Removes an element
+    pub fn rm(&mut self, element: E) {
+        todo!()
+    }    
+
+    pub fn merge(&mut self){
+        todo!()
+    }
+    
     // --------------------------
     // MERGE FUNCTIONS 
     // --------------------------
@@ -159,7 +168,4 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         res
     }
 
-    fn get_kernel_elements(&self) -> HashSet<E> {
-        todo!()
-    }
 }

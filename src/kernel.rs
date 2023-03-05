@@ -50,9 +50,16 @@ where
     // OPERATIONS
     // --------------------------
 
-    /// TODO: to support self and other sets;
+    /// Gets elements of the kernel.
+    /// TODO: to test
     pub fn elements(&self) -> HashSet<E> {
-        todo!()
+        let mut res: HashSet<E> = HashSet::new();
+        for (_, hash) in self.elems.iter(){
+            hash.iter().for_each(|(_, e)| {
+                res.insert(e.clone());
+            });
+        }
+        res
     }
 
     /// Adds an element with key equals to self.id and return the added entry.
