@@ -36,17 +36,16 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     // --------------------------
 
     /// Returns all the elements known by the node.
-    /// Must be the combination of the elements in the token and in the set.
+    /// Must be the combination of the elements in the token and set.
+    /// TODO: to test
     pub fn fetch(&self) -> HashSet<E> {
-        todo!()
-    }
-
-    /// Gets all the elements from the token
-    fn get_token_elements(&self) -> HashSet<E> {
-        todo!()
+        let mut kernel_elems = self.get_kernel_elements();
+        kernel_elems.extend(self.get_kernel_elements());
+        kernel_elems
     }
 
     /// Adds an element to the node.
+    /// TODO: to test
     pub fn add(&mut self, element: E) -> (i64, i64, E) {
         self.kernel.add(element, self.sck)
     }
@@ -54,7 +53,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     // --------------------------
     // MERGE FUNCTIONS 
     // --------------------------
-
 
     /// Creates a slot.
     /// # Example
@@ -144,5 +142,18 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Applies translatiosn that came from the other node.
     pub fn translate(&mut self, other: &Self) {
         if self.tier >= other.tier {}
+    }
+
+    // --------------------------
+    // UTILS FUNCTIONS 
+    // --------------------------
+
+    /// Gets all the elements from the token
+    fn get_token_elements(&self) -> HashSet<E> {
+        todo!()
+    }
+
+    fn get_kernel_elements(&self) -> HashSet<E> {
+        todo!()
     }
 }

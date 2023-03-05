@@ -55,9 +55,20 @@ where
         todo!()
     }
 
-    /// Adds an element and return the added entry.
+    /// Adds an element with key equals to self.id and return the added entry.
+    /// TODO: to test
     pub fn add(&mut self, element: E, sck: i64) -> (i64, i64, E) {
-        todo!()
+        let (_,_,n) = self.cc.makedot(&self.id, sck); 
+        let key = (sck, n);
+
+        self.elems
+            .entry(self.id.clone())
+            .and_modify(|hash| {
+                hash.insert(key.clone(), element.clone());
+            })
+            .or_insert(HashMap::from([(key, element.clone())]));
+
+        (sck, n, element)
     }
 
     /// TODO: to support self_set
@@ -77,4 +88,5 @@ where
     pub fn has_seen(&self, id: &NodeId) -> bool {
         self.cc.has_seen(id)
     }
+
 }
