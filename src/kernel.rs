@@ -1,3 +1,4 @@
+use crate::types::tag_element::TagElement;
 use crate::{DotContext, NodeId};
 use core::hash::Hash;
 use std::fmt::Debug;
@@ -14,7 +15,7 @@ where
     E: Eq + Display + Clone + Hash + Debug,
 {
     pub id: NodeId,
-    pub elems: HashMap<NodeId, HashSet<(i64, i64, E)>>, // (id, sck, tag, element).
+    pub elems: HashMap<NodeId, HashSet<TagElement<E>>>, 
     cc: DotContext<NodeId>,
 }
 
@@ -36,7 +37,7 @@ where
     // --------------------------
 
     /// Returns the set of a node.
-    pub fn get_set(&self, id: &NodeId) -> Option<&HashSet<(i64, i64, E)>> {
+    pub fn get_set(&self, id: &NodeId) -> Option<&HashSet<TagElement<E>>> {
         self.elems.get(id)
     }
 
@@ -70,8 +71,8 @@ where
     pub fn elements(&self) -> HashSet<E> {
         let mut res: HashSet<E> = HashSet::new();
         for (_, hash) in self.elems.iter() {
-            hash.iter().for_each(|(_, _, e)| {
-                res.insert(e.clone());
+            hash.iter().for_each(|tag_element| {
+                res.insert(tag_element.elem.clone());
             });
         }
         res
@@ -79,18 +80,18 @@ where
 
     /// Adds an element with key equals to self.id and return the added entry.
     /// TODO: to test
-    pub fn add(&mut self, element: E, sck: i64) -> (i64, i64, E) {
+    pub fn add(&mut self, elem: E, sck: i64) -> TagElement<E> {
         let (_, _, n) = self.cc.makedot(&self.id, sck);
-        let entry: (i64, i64, E) = (sck, n, element);
+        let tag_element = TagElement {sck, n, elem};
 
         self.elems
             .entry(self.id.clone())
             .and_modify(|set| {
-                set.insert(entry.clone());
+                set.insert(tag_element.clone());
             })
-            .or_insert(HashSet::from([entry.clone()]));
+            .or_insert(HashSet::from([tag_element.clone()]));
 
-        entry
+        tag_element 
     }
 
     /// Remove an element from the set of elements. 
@@ -99,8 +100,8 @@ where
         self.elems.iter_mut().for_each(|(_, set)| {
             *set = set
                 .drain()
-                .filter(|(_, _, s_elem)| {
-                    return *elem == *s_elem;
+                .filter(|tag_element| {
+                    return *elem == tag_element.elem;
                 })
                 .collect();
         });

@@ -4,6 +4,9 @@ use std::hash::Hash;
 
 use crate::kernel::Kernel;
 use crate::nodeId::NodeId;
+use crate::types::ck::Ck;
+use crate::types::dot::Dot;
+use crate::types::tag_element::TagElement;
 
 #[derive(Debug)]
 pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
@@ -12,15 +15,8 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     sck: i64,
     pub dck: i64,
     pub slots: HashMap<NodeId, (i64, i64)>, // Slots {id -> (sck, dck)}
-    tokens: HashMap<
-        (NodeId, NodeId),
-        (
-            (i64, i64),
-            HashSet<(NodeId, i64, i64)>,
-            HashSet<(i64, i64, E)>,
-        ),
-    >, // (sck, dck, tag, (sck, tag, E))
-    pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
+    tokens: HashMap<(NodeId, NodeId), (Ck, HashSet<Dot>, HashSet<TagElement<E>>)>, // (sck, dck, tag, (sck, tag, E))
+    pub transl: HashSet<(TagElement<E>, TagElement<E>)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
     tier: i32,
 }
 
@@ -40,14 +36,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn get_tokens(
         &self,
-    ) -> HashMap<
-        (NodeId, NodeId),
-        (
-            (i64, i64),
-            HashSet<(NodeId, i64, i64)>,
-            HashSet<(i64, i64, E)>,
-        ),
-    > {
+    ) -> HashMap<(NodeId, NodeId), (Ck, HashSet<Dot>, HashSet<TagElement<E>>)> {
         return self.tokens.clone();
     }
 
@@ -123,7 +112,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// Creates a token in case there is a match slot in the other node.
-    /// TESTED 
+    /// TESTED
     pub fn create_token(&mut self, other: &Self) {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].0 == self.sck {
             let slot_ck = other.slots[&self.id];
