@@ -106,7 +106,7 @@ where
         });
     }
 
-    pub fn join(&mut self, other: &mut Self) {
+    pub fn join(&mut self, other: & Self) {
         todo!()
     }
 

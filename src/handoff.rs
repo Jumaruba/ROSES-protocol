@@ -38,6 +38,19 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }
     }
 
+    pub fn get_tokens(
+        &self,
+    ) -> HashMap<
+        (NodeId, NodeId),
+        (
+            (i64, i64),
+            HashSet<(NodeId, i64, i64)>,
+            HashSet<(i64, i64, E)>,
+        ),
+    > {
+        return self.tokens.clone();
+    }
+
     // --------------------------
     // OPERATIONS
     // Core operations of the Handoff
@@ -68,6 +81,12 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn merge(&mut self, other: &mut Self) {
         self.fill_slots(other);
         self.discard_slot(other);
+        self.create_slot(other);
+        self.merge_vectors(other);
+        // aggregate
+        self.discard_slot(other);
+        self.create_token(other);
+        self.cache_tokens(other);
     }
 
     // --------------------------
@@ -104,7 +123,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// Creates a token in case there is a match slot in the other node.
-    /// TODO: to test
+    /// TESTED 
     pub fn create_token(&mut self, other: &Self) {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].0 == self.sck {
             let slot_ck = other.slots[&self.id];
@@ -124,14 +143,17 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }
     }
 
-    /// TODO: to test 
-    pub fn fill_slots(&mut self, other: &mut Self) {
-        other.tokens.iter_mut().for_each(|((_, dst), (ck, _, elems))| {
+    pub fn merge_vectors(&mut self, other: &Self) {
+        self.kernel.join(&other.kernel);
+    }
+
+    /// TODO: to test
+    pub fn fill_slots(&mut self, other: &Self) {
+        other.tokens.iter().for_each(|((_, dst), (ck, _, elems))| {
             if *dst == self.id {
                 if let Some(slot_val) = self.slots.get(&other.id) {
                     if slot_val == ck {
                         self.add_tokens(&other.id, elems);
-                        self.kernel.join(&mut other.kernel);
                         self.slots.remove(&other.id);
                     }
                 }
@@ -169,14 +191,26 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Discard tokens that were already used or are out of date.
     /// TODO: to test
     pub fn discard_tokens(&mut self, other: &Self) {
-        let token: HashMap<(NodeId, NodeId), ((i64,i64), HashSet<(NodeId, i64, i64)>, HashSet<(i64, i64, E)>)> = self.tokens.drain().filter(|((src, dst), ((_, dck), _, _))| {
-            !(*dst == other.id && match other.slots.get(&src) {
-                Some(&(_, d)) =>  d > *dck, 
-                None => other.dck > *dck
+        let token: HashMap<
+            (NodeId, NodeId),
+            (
+                (i64, i64),
+                HashSet<(NodeId, i64, i64)>,
+                HashSet<(i64, i64, E)>,
+            ),
+        > = self
+            .tokens
+            .drain()
+            .filter(|((src, dst), ((_, dck), _, _))| {
+                !(*dst == other.id
+                    && match other.slots.get(&src) {
+                        Some(&(_, d)) => d > *dck,
+                        None => other.dck > *dck,
+                    })
             })
-        }).collect();
+            .collect();
         self.tokens = token;
-    }    
+    }
 
     /// Updates the values in set and cc.
     pub fn aggregate(&mut self, other: &Self) {}
@@ -186,6 +220,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         if self.tier >= other.tier {}
     }
 
+    pub fn cache_tokens(&mut self, other: &Self) {
+        todo!()
+    }
     // --------------------------
     // UTILS FUNCTIONS
     // --------------------------
