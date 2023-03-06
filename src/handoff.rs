@@ -123,6 +123,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }
     }
 
+    /// TODO: to test 
     pub fn fill_slots(&mut self, other: &mut Self) {
         other.tokens.iter_mut().for_each(|((_, dst), (ck, _, elems))| {
             if *dst == self.id {
@@ -155,17 +156,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             });
     }
 
-    fn create_translation(&mut self, other_id: &NodeId, triple: &(i64, i64, E), tag_dst: i64) {
-        self.transl.insert((
-            other_id.clone(),
-            triple.0,
-            triple.1,
-            self.id.clone(),
-            self.sck,
-            tag_dst,
-        ));
-    }
-
     /// Discards a slot that can never be filled, since sck is higher than the one marked in the slot.
     pub fn discard_slot(&mut self, other: &Self) {
         todo!()
@@ -173,8 +163,14 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     /// Discard tokens that were already used or are out of date.
     pub fn discard_tokens(&mut self, other: &Self) {
-        todo!()
-    }
+        let token: HashMap<(NodeId, NodeId), ((i64,i64), HashSet<(NodeId, i64, i64)>, HashSet<(i64, i64, E)>)> = self.tokens.drain().filter(|((src, dst), ((_, dck), _, _))| {
+            !(*dst == other.id && match other.slots.get(&src) {
+                Some(&(_, d)) =>  d > *dck, 
+                None => other.dck > *dck
+            })
+        }).collect();
+        self.tokens = token;
+    }    
 
     /// Updates the values in set and cc.
     pub fn aggregate(&mut self, other: &Self) {}
