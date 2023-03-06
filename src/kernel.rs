@@ -14,8 +14,8 @@ where
     E: Eq + Display + Clone + Hash + Debug,
 {
     pub id: NodeId,
-    pub elems: HashMap<NodeId, HashMap<(i64, i64), E>>, // (id, sck, tag, element).
-    pub cc: DotContext<NodeId>,
+    pub elems: HashMap<NodeId, HashSet<(i64, i64, E)>>, // (id, sck, tag, element).
+    cc: DotContext<NodeId>,
 }
 
 impl<E> Kernel<E>
@@ -29,33 +29,45 @@ where
             cc: DotContext::new(),
         }
     }
+
     // --------------------------
     // STANDARD FUNCTIONS
+    // Functions that modifies the structures.
     // --------------------------
 
     /// Returns the set of a node.
     pub fn get_set(&self, id: &NodeId) -> Option<&HashSet<(i64, i64, E)>> {
-        todo!()
+        self.elems.get(id)
     }
 
     /// Removes all the entries related to the id.
-    pub fn remove_id(&mut self, id: &NodeId) {
-        todo!()
+    /// Cleans both elements and dot context.
+    /// TODO: To test
+    pub fn clean_id(&mut self, id: &NodeId) {
+        self.elems.remove(id);
+        self.cc.clean_id(id);
     }
 
     pub fn get_last_tag(&self, sck: i64) -> i64 {
         todo!()
     }
+
+    /// Gets the value in the causal context.
+    pub fn get_self_cc_n(&self, sck: &i64) -> i64 {
+        self.cc.get_cc_n(&self.id, sck)
+    }
+    
     // --------------------------
     // OPERATIONS
+    // CRDT's core operations. 
     // --------------------------
 
     /// Gets elements of the kernel.
     /// TODO: to test
     pub fn elements(&self) -> HashSet<E> {
         let mut res: HashSet<E> = HashSet::new();
-        for (_, hash) in self.elems.iter(){
-            hash.iter().for_each(|(_, e)| {
+        for (_, hash) in self.elems.iter() {
+            hash.iter().for_each(|(_, _, e)| {
                 res.insert(e.clone());
             });
         }
@@ -65,22 +77,30 @@ where
     /// Adds an element with key equals to self.id and return the added entry.
     /// TODO: to test
     pub fn add(&mut self, element: E, sck: i64) -> (i64, i64, E) {
-        let (_,_,n) = self.cc.makedot(&self.id, sck); 
-        let key = (sck, n);
+        let (_, _, n) = self.cc.makedot(&self.id, sck);
+        let entry: (i64, i64, E) = (sck, n, element);
 
         self.elems
             .entry(self.id.clone())
-            .and_modify(|hash| {
-                hash.insert(key.clone(), element.clone());
+            .and_modify(|set| {
+                set.insert(entry.clone());
             })
-            .or_insert(HashMap::from([(key, element.clone())]));
+            .or_insert(HashSet::from([entry.clone()]));
 
-        (sck, n, element)
+        entry
     }
 
-    /// TODO: to support self_set
-    pub fn rm(&mut self, element: E) {
-        todo!()
+    /// Remove an element from the set of elements. 
+    /// TODO: to test
+    pub fn rm(&mut self, elem: &E) {
+        self.elems.iter_mut().for_each(|(_, set)| {
+            *set = set
+                .drain()
+                .filter(|(_, _, s_elem)| {
+                    return *elem == *s_elem;
+                })
+                .collect();
+        });
     }
 
     pub fn join(&mut self, other: &mut Self) {
@@ -95,5 +115,4 @@ where
     pub fn has_seen(&self, id: &NodeId) -> bool {
         self.cc.has_seen(id)
     }
-
 }

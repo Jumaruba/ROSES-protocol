@@ -8,9 +8,9 @@ use crate::nodeId::NodeId;
 #[derive(Debug)]
 pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     id: NodeId,
-    kernel: Kernel<E>, 
-    sck: i64,          
-    pub dck: i64,      
+    kernel: Kernel<E>,
+    sck: i64,
+    pub dck: i64,
     pub slots: HashMap<NodeId, (i64, i64)>, // Slots {id -> (sck, dck)}
     tokens: HashMap<(NodeId, NodeId), ((i64, i64), i64, HashSet<(i64, i64, E)>)>, // (sck, dck, tag, (sck, tag, E))
     pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
@@ -33,6 +33,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     // --------------------------
     // OPERATIONS
+    // Core operations of the Handoff
     // --------------------------
 
     /// Returns all the elements known by the node.
@@ -51,16 +52,19 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// Removes an element
-    pub fn rm(&mut self, element: E) {
-        todo!()
-    }    
+    /// TODO: To test
+    pub fn rm(&mut self, elem: E) {
+        self.rm_token_elem(&elem);
+        self.kernel.rm(&elem);
+    }
 
-    pub fn merge(&mut self){
+    pub fn merge(&mut self) {
         todo!()
     }
-    
+
     // --------------------------
-    // MERGE FUNCTIONS 
+    // MERGE FUNCTIONS
+    // Functions that composes the merge.
     // --------------------------
 
     /// Creates a slot.
@@ -83,7 +87,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn create_slot(&mut self, other: &Self) {
         // can be optimized to check only the other.kernel.set.
         if self.tier < other.tier
-            && other.kernel.cc.cc.contains_key(&other.id)
+            && other.kernel.has_seen(&other.id)
             && !self.slots.contains_key(&other.id)
         {
             self.slots.insert(other.id.clone(), (other.sck, self.dck));
@@ -94,11 +98,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Creates a token in case there is a match slot in the other node.
     /// TODO: to test
     pub fn create_token(&mut self, other: &Self) {
-        todo!();
-        /*
         if other.slots.contains_key(&self.id) && other.slots[&self.id].0 == self.sck {
             let slot_ck = other.slots[&self.id];
-            let self_n = self.kernel.cc.get_n(&self.id, &self.sck);
+            let self_n = self.kernel.get_self_cc_n(&self.sck);
 
             let set = self
                 .kernel
@@ -109,9 +111,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
             self.tokens
                 .insert((self.id.clone(), other.id.clone()), (slot_ck, self_n, set));
-            self.kernel.remove_id(&self.id);
+            self.kernel.clean_id(&self.id);
             self.sck += 1;
-        }*/
+        }
     }
 
     pub fn fill_slots(&mut self, other: &Self) {
@@ -123,7 +125,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     fn add_tokens(&mut self, other: &Self) {
         todo!()
     }
-
 
     fn create_translation(&mut self, other_id: &NodeId, triple: &(i64, i64, E), tag_dst: i64) {
         self.transl.insert((
@@ -155,17 +156,31 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     // --------------------------
-    // UTILS FUNCTIONS 
+    // UTILS FUNCTIONS
     // --------------------------
 
     /// Gets all the elements from the token
     /// TODO: to test
     fn get_token_elements(&self) -> HashSet<E> {
         let mut res: HashSet<E> = HashSet::new();
-        for (_,(_,_,elems)) in self.tokens.iter(){
-            elems.iter().for_each(|(_,_,e)| {res.insert(e.clone());});
+        for (_, (_, _, elems)) in self.tokens.iter() {
+            elems.iter().for_each(|(_, _, e)| {
+                res.insert(e.clone());
+            });
         }
         res
     }
 
+    /// Removes an element from the token.
+    /// TODO: To test
+    fn rm_token_elem(&mut self, elem: &E) {
+        self.tokens.iter_mut().for_each(|(_, (_, _, set))| {
+            *set = set
+                .drain()
+                .filter(|(_, _, s_elem)| {
+                    return s_elem == elem;
+                })
+                .collect();
+        });
+    }
 }

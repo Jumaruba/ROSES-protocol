@@ -18,6 +18,19 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
             dc: HashMap::new(),
         }
     }
+    // --------------------------
+    // STANDARD FUNCTIONS
+    // --------------------------
+
+    /// TODO: test
+    /// Get the value in the cc. If the entry doesn't exists, return 0. 
+    pub fn get_cc_n(&self, id: &K, sck: &i64) -> i64 {
+        self
+            .cc
+            .get(id)
+            .and_then(|hash| hash.get(sck))
+            .unwrap_or(&0).clone()
+    }
 
     // --------------------------
     // STANDARD FUNCTIONS 
@@ -163,26 +176,17 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     }
 
 
-
     // --------------------------
     // UTILS
     // --------------------------
 
     /// TODO: to test
-    pub fn remove_id(&mut self, id: &K) {
+    pub fn clean_id(&mut self, id: &K) {
         self.cc.remove(id);
         self.dc.remove(id);
     }
 
-    /// TODO: test
-    /// Get the value in the cc. If the entry doesn't exists, return 0.
-    pub fn get_n(&self, id: &K, sck: &i64) -> i64 {
-        self
-            .cc
-            .get(id)
-            .and_then(|hash| hash.get(sck))
-            .unwrap_or(&0).clone()
-    }
+
 
 
     fn union_dc(&mut self, dc: &HashMap<K, HashSet<(i64, i64)>>) {
