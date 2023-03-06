@@ -23,21 +23,32 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     // --------------------------
 
     /// TODO: test
-    /// Get the value in the cc. If the entry doesn't exists, return 0. 
+    /// Get the value in the cc. If the entry doesn't exists, return 0.
     pub fn get_cc_n(&self, id: &K, sck: &i64) -> i64 {
-        self
-            .cc
+        self.cc
             .get(id)
             .and_then(|hash| hash.get(sck))
-            .unwrap_or(&0).clone()
+            .unwrap_or(&0)
+            .clone()
     }
 
+    pub fn get_cc(&self, id: &K) -> HashSet<(K, i64, i64)> {
+        let mut res: HashSet<(K, i64, i64)> = HashSet::new();
+        self.dc
+            .get(id)
+            .unwrap_or(&HashSet::new())
+            .iter()
+            .for_each(|(sck, n)| {
+                res.insert((id.clone(), sck.clone(), n.clone()));
+            });
+        res
+    }
     // --------------------------
-    // STANDARD FUNCTIONS 
+    // STANDARD FUNCTIONS
     // --------------------------
 
-    /// Verifies if there is information about a node. 
-    pub fn has_seen(&self, id: &K) ->  bool {
+    /// Verifies if there is information about a node.
+    pub fn has_seen(&self, id: &K) -> bool {
         return self.cc.contains_key(id) || self.dc.contains_key(id);
     }
 
@@ -56,7 +67,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
 
         false
     }
- 
+
     // --------------------------
     // OPERATIONS
     // --------------------------
@@ -133,7 +144,6 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         self.compact();
     }
 
-
     /// TODO: make more tests on this.
     pub fn compact(&mut self) {
         let mut repeat: bool = true;
@@ -175,7 +185,6 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         }
     }
 
-
     // --------------------------
     // UTILS
     // --------------------------
@@ -185,9 +194,6 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
         self.cc.remove(id);
         self.dc.remove(id);
     }
-
-
-
 
     fn union_dc(&mut self, dc: &HashMap<K, HashSet<(i64, i64)>>) {
         for (id, other_hash) in dc.iter() {

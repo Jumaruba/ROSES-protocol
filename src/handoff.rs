@@ -12,7 +12,14 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     sck: i64,
     pub dck: i64,
     pub slots: HashMap<NodeId, (i64, i64)>, // Slots {id -> (sck, dck)}
-    tokens: HashMap<(NodeId, NodeId), ((i64, i64), i64, HashSet<(i64, i64, E)>)>, // (sck, dck, tag, (sck, tag, E))
+    tokens: HashMap<
+        (NodeId, NodeId),
+        (
+            (i64, i64),
+            HashSet<(NodeId, i64, i64)>,
+            HashSet<(i64, i64, E)>,
+        ),
+    >, // (sck, dck, tag, (sck, tag, E))
     pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
     tier: i32,
 }
@@ -100,7 +107,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn create_token(&mut self, other: &Self) {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].0 == self.sck {
             let slot_ck = other.slots[&self.id];
-            let self_n = self.kernel.get_self_cc_n(&self.sck);
+            let cc = self.kernel.get_cc();
 
             let set = self
                 .kernel
@@ -110,20 +117,42 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 .clone();
 
             self.tokens
-                .insert((self.id.clone(), other.id.clone()), (slot_ck, self_n, set));
+                .insert((self.id.clone(), other.id.clone()), (slot_ck, cc, set));
             self.kernel.clean_id(&self.id);
             self.sck += 1;
         }
     }
 
-    pub fn fill_slots(&mut self, other: &Self) {
-        todo!()
+    pub fn fill_slots(&mut self, other: &mut Self) {
+        other.tokens.iter_mut().for_each(|((_, dst), (ck, _, elems))| {
+            if *dst == self.id {
+                if let Some(slot_val) = self.slots.get(&other.id) {
+                    if slot_val == ck {
+                        self.add_tokens(&other.id, elems);
+                        self.kernel.join(&mut other.kernel);
+                        self.slots.remove(&other.id);
+                    }
+                }
+            }
+        });
     }
 
     /// Merges the tokens elements with the actual state.
     /// A correct kernel contains only elements created in the source node.
-    fn add_tokens(&mut self, other: &Self) {
-        todo!()
+    fn add_tokens(&mut self, other_id: &NodeId, other_elems: &HashSet<(i64, i64, E)>) {
+        other_elems
+            .iter()
+            .for_each(|(other_sck, other_n, other_elem)| {
+                let (self_sck, self_n, _) = self.kernel.add(other_elem.clone(), self.sck);
+                self.transl.insert((
+                    other_id.clone(),
+                    other_sck.clone(),
+                    other_n.clone(),
+                    self.id.clone(),
+                    self_sck,
+                    self_n,
+                ));
+            });
     }
 
     fn create_translation(&mut self, other_id: &NodeId, triple: &(i64, i64, E), tag_dst: i64) {

@@ -57,6 +57,9 @@ where
         self.cc.get_cc_n(&self.id, sck)
     }
     
+    pub fn get_cc(&self) -> HashSet<(NodeId, i64, i64)> {
+        self.cc.get_cc(&self.id)
+    }
     // --------------------------
     // OPERATIONS
     // CRDT's core operations. 
