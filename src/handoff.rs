@@ -65,8 +65,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.kernel.rm(&elem);
     }
 
-    pub fn merge(&mut self) {
-        todo!()
+    pub fn merge(&mut self, other: &mut Self) {
+        self.fill_slots(other);
+        self.discard_slot(other);
     }
 
     // --------------------------
@@ -158,10 +159,15 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     /// Discards a slot that can never be filled, since sck is higher than the one marked in the slot.
     pub fn discard_slot(&mut self, other: &Self) {
-        todo!()
+        if let Some(&(src, _)) = self.slots.get(&other.id) {
+            if other.sck > src {
+                self.slots.remove(&other.id);
+            }
+        }
     }
 
     /// Discard tokens that were already used or are out of date.
+    /// TODO: to test
     pub fn discard_tokens(&mut self, other: &Self) {
         let token: HashMap<(NodeId, NodeId), ((i64,i64), HashSet<(NodeId, i64, i64)>, HashSet<(i64, i64, E)>)> = self.tokens.drain().filter(|((src, dst), ((_, dck), _, _))| {
             !(*dst == other.id && match other.slots.get(&src) {
