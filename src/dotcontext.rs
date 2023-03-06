@@ -1,17 +1,19 @@
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
-use std::hash::Hash;
+
+use crate::nodeId::NodeId;
+use crate::types::dot::Dot;
 
 /// Tries to optimize mapping.
 /// Inspired in: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct DotContext<K: PartialEq + Eq + Hash + Clone + Debug> {
-    pub cc: HashMap<K, HashMap<i64, i64>>, // Compact Context. {id -> {sck -> tag}}
-    pub dc: HashMap<K, HashSet<(i64, i64)>>, // Dot cloud. { id -> {(sck, tag)}}
+pub struct DotContext {
+    pub cc: HashMap<NodeId, HashMap<i64, i64>>, // Compact Context. {id -> {sck -> tag}}
+    pub dc: HashMap<NodeId, HashSet<(i64, i64)>>, // Dot cloud. { id -> {(sck, tag)}}
 }
 
-impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
+impl DotContext {
     pub fn new() -> Self {
         Self {
             cc: HashMap::new(),
@@ -24,7 +26,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
 
     /// TODO: test
     /// Get the value in the cc. If the entry doesn't exists, return 0.
-    pub fn get_cc_n(&self, id: &K, sck: &i64) -> i64 {
+    pub fn get_cc_n(&self, id: &NodeId, sck: &i64) -> i64 {
         self.cc
             .get(id)
             .and_then(|hash| hash.get(sck))
@@ -32,14 +34,14 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
             .clone()
     }
 
-    pub fn get_cc(&self, id: &K) -> HashSet<(K, i64, i64)> {
-        let mut res: HashSet<(K, i64, i64)> = HashSet::new();
+    pub fn get_cc(&self, id: &NodeId) -> HashSet<Dot> {
+        let mut res: HashSet<Dot> = HashSet::new();
         self.dc
             .get(id)
             .unwrap_or(&HashSet::new())
             .iter()
             .for_each(|(sck, n)| {
-                res.insert((id.clone(), sck.clone(), n.clone()));
+                res.insert(Dot{id: id.clone(), sck: sck.clone(), n: n.clone()});
             });
         res
     }
@@ -48,21 +50,21 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     // --------------------------
 
     /// Verifies if there is information about a node.
-    pub fn has_seen(&self, id: &K) -> bool {
+    pub fn has_seen(&self, id: &NodeId) -> bool {
         return self.cc.contains_key(id) || self.dc.contains_key(id);
     }
 
     /// Verifies if the received argument was already seen.
-    pub fn dotin(&self, d: &(K, i64, i64)) -> bool {
-        if let Some(hash) = self.cc.get(&d.0) {
-            if let Some(val) = hash.get(&d.1) {
-                if val >= &d.2 {
+    pub fn dotin(&self, d: &Dot) -> bool {
+        if let Some(hash) = self.cc.get(&d.id) {
+            if let Some(val) = hash.get(&d.sck) {
+                if val >= &d.n {
                     return true;
                 }
             }
         }
-        if let Some(set) = self.dc.get(&d.0) {
-            return set.contains(&(d.1, d.2));
+        if let Some(set) = self.dc.get(&d.id) {
+            return set.contains(&(d.sck, d.n));
         }
 
         false
@@ -88,7 +90,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     /// assert_eq!(*dotctx.cc.get(&"A".to_string()).unwrap().get(&3).unwrap(), 1);
     /// assert_eq!(*dotctx.cc.get(&"A".to_string()).unwrap().get(&1).unwrap(), 2);
     /// ```
-    pub fn makedot(&mut self, id: &K, sck: i64) -> (K, i64, i64) {
+    pub fn makedot(&mut self, id: &NodeId, sck: i64) -> (NodeId, i64, i64) {
         // Get hash (sck, n) or create it.
         let cc_hash = self
             .cc
@@ -112,7 +114,7 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     /// assert_eq!(dotctx.dc[&"A".to_string()], HashSet::from([(1,2), (1,4)]));
     /// ```
     ///
-    pub fn insert_dot(&mut self, id: &K, sck: i64, tag: i64, compact: Option<bool>) {
+    pub fn insert_dot(&mut self, id: &NodeId, sck: i64, tag: i64, compact: Option<bool>) {
         self.dc
             .entry(id.clone())
             .and_modify(|hash| {
@@ -190,12 +192,12 @@ impl<K: PartialEq + Eq + Hash + Clone + Debug> DotContext<K> {
     // --------------------------
 
     /// TODO: to test
-    pub fn clean_id(&mut self, id: &K) {
+    pub fn clean_id(&mut self, id: &NodeId) {
         self.cc.remove(id);
         self.dc.remove(id);
     }
 
-    fn union_dc(&mut self, dc: &HashMap<K, HashSet<(i64, i64)>>) {
+    fn union_dc(&mut self, dc: &HashMap<NodeId, HashSet<(i64, i64)>>) {
         for (id, other_hash) in dc.iter() {
             self.dc
                 .entry(id.clone())

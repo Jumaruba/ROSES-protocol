@@ -14,9 +14,9 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     kernel: Kernel<E>,
     sck: i64,
     pub dck: i64,
-    pub slots: HashMap<NodeId, (i64, i64)>, // Slots {id -> (sck, dck)}
+    pub slots: HashMap<NodeId, Ck>,
     tokens: HashMap<(NodeId, NodeId), (Ck, HashSet<Dot>, HashSet<TagElement<E>>)>, // (sck, dck, tag, (sck, tag, E))
-    pub transl: HashSet<(TagElement<E>, TagElement<E>)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
+    pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
     tier: i32,
 }
 
@@ -56,8 +56,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     /// Adds an element to the node.
     /// TODO: to test
-    pub fn add(&mut self, element: E) -> (i64, i64, E) {
-        self.kernel.add(element, self.sck)
+    pub fn add(&mut self, elem: E) -> TagElement<E> {
+        self.kernel.add(elem, self.sck)
     }
 
     /// Removes an element
@@ -106,7 +106,13 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             && other.kernel.has_seen(&other.id)
             && !self.slots.contains_key(&other.id)
         {
-            self.slots.insert(other.id.clone(), (other.sck, self.dck));
+            self.slots.insert(
+                other.id.clone(),
+                Ck {
+                    sck: other.sck,
+                    dck: self.dck,
+                },
+            );
             self.dck += 1;
         }
     }
@@ -114,7 +120,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Creates a token in case there is a match slot in the other node.
     /// TESTED
     pub fn create_token(&mut self, other: &Self) {
-        if other.slots.contains_key(&self.id) && other.slots[&self.id].0 == self.sck {
+        if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.sck {
             let slot_ck = other.slots[&self.id];
             let cc = self.kernel.get_cc();
 
@@ -152,26 +158,26 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     /// Merges the tokens elements with the actual state.
     /// A correct kernel contains only elements created in the source node.
-    fn add_tokens(&mut self, other_id: &NodeId, other_elems: &HashSet<(i64, i64, E)>) {
+    fn add_tokens(&mut self, other_id: &NodeId, other_elems: &HashSet<TagElement<E>>) {
         other_elems
             .iter()
-            .for_each(|(other_sck, other_n, other_elem)| {
-                let (self_sck, self_n, _) = self.kernel.add(other_elem.clone(), self.sck);
+            .for_each(|o_tag_element| {
+                let s_tag_element = self.kernel.add(o_tag_element.elem.clone(), self.sck);
                 self.transl.insert((
                     other_id.clone(),
-                    other_sck.clone(),
-                    other_n.clone(),
+                    o_tag_element.sck.clone(),
+                    o_tag_element.n.clone(),
                     self.id.clone(),
-                    self_sck,
-                    self_n,
+                    s_tag_element.sck,
+                    s_tag_element.n,
                 ));
             });
     }
 
     /// Discards a slot that can never be filled, since sck is higher than the one marked in the slot.
     pub fn discard_slot(&mut self, other: &Self) {
-        if let Some(&(src, _)) = self.slots.get(&other.id) {
-            if other.sck > src {
+        if let Some(&ck) = self.slots.get(&other.id) {
+            if other.sck > ck.sck{
                 self.slots.remove(&other.id);
             }
         }
@@ -183,18 +189,18 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         let token: HashMap<
             (NodeId, NodeId),
             (
-                (i64, i64),
-                HashSet<(NodeId, i64, i64)>,
-                HashSet<(i64, i64, E)>,
+                Ck,
+                HashSet<Dot>,
+                HashSet<TagElement<E>>,
             ),
         > = self
             .tokens
             .drain()
-            .filter(|((src, dst), ((_, dck), _, _))| {
+            .filter(|((src, dst), (token_ck, _, _))| {
                 !(*dst == other.id
                     && match other.slots.get(&src) {
-                        Some(&(_, d)) => d > *dck,
-                        None => other.dck > *dck,
+                        Some(&slot_ck) => slot_ck.dck > token_ck.dck,
+                        None => other.dck > token_ck.dck,
                     })
             })
             .collect();
@@ -221,8 +227,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     fn get_token_elements(&self) -> HashSet<E> {
         let mut res: HashSet<E> = HashSet::new();
         for (_, (_, _, elems)) in self.tokens.iter() {
-            elems.iter().for_each(|(_, _, e)| {
-                res.insert(e.clone());
+            elems.iter().for_each(|tag_element| {
+                res.insert(tag_element.elem.clone());
             });
         }
         res
@@ -234,8 +240,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.tokens.iter_mut().for_each(|(_, (_, _, set))| {
             *set = set
                 .drain()
-                .filter(|(_, _, s_elem)| {
-                    return s_elem == elem;
+                .filter(|tag_element| {
+                    return tag_element.elem == *elem;
                 })
                 .collect();
         });

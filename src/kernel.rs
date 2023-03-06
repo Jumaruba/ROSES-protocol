@@ -1,3 +1,4 @@
+use crate::types::dot::Dot;
 use crate::types::tag_element::TagElement;
 use crate::{DotContext, NodeId};
 use core::hash::Hash;
@@ -16,7 +17,7 @@ where
 {
     pub id: NodeId,
     pub elems: HashMap<NodeId, HashSet<TagElement<E>>>, 
-    cc: DotContext<NodeId>,
+    cc: DotContext,
 }
 
 impl<E> Kernel<E>
@@ -58,7 +59,7 @@ where
         self.cc.get_cc_n(&self.id, sck)
     }
     
-    pub fn get_cc(&self) -> HashSet<(NodeId, i64, i64)> {
+    pub fn get_cc(&self) -> HashSet<Dot> {
         self.cc.get_cc(&self.id)
     }
     // --------------------------
