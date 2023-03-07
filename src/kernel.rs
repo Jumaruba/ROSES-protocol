@@ -64,7 +64,7 @@ where
     }
 
     pub fn dot_in(&self, d: &Dot) -> bool{
-        self.cc.dotin(d)
+        self.cc.dot_in(d)
     }
     // --------------------------
     // OPERATIONS
@@ -123,7 +123,7 @@ where
         // Intersections and elements not known by other.
         self.elems.iter_mut().for_each(|(id, hash)| {
             *hash = hash.drain().filter(|tag| {
-                other.has_element(&id, &tag) || !other.cc.dotin(&Dot{id: id.clone(), sck:tag.sck, n:tag.n})
+                other.has_element(&id, &tag) || !other.cc.dot_in(&Dot{id: id.clone(), sck:tag.sck, n:tag.n})
             }).collect();
         });
 
@@ -131,7 +131,7 @@ where
         for (id, hash) in other.elems.iter(){
             for tag in hash.iter() {
                 let dot = Dot{id: id.clone(), sck: tag.sck, n: tag.sck};
-                if !self.cc.dotin(&dot) {
+                if !self.cc.dot_in(&dot) {
                     self.elems.entry(id.clone()).and_modify(|val| {
                         val.insert(tag.clone());
                     }).or_insert(HashSet::from([tag.clone()]));
@@ -147,7 +147,7 @@ where
 
     /// Returns true if the node has ever received information about it, and false otherwise.
     pub fn has_seen(&self, id: &NodeId) -> bool {
-        self.cc.has_seen(id)
+        self.cc.id_in(id)
     }
 
     /// TODO : to test and improve

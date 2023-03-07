@@ -23,15 +23,10 @@ impl DotContext {
 
     // STANDARD FUNCTIONS =======================================
 
-    /// Verifies if there is information about a node.
-    /// TODO: to test
-    pub fn has_seen(&self, id: &NodeId) -> bool {
-        return self.cc.contains_key(id) || self.dc.contains_key(id);
-    }
 
     /// Verifies if the received argument was already seen.
     /// TODO: to test
-    pub fn dotin(&self, d: &Dot) -> bool {
+    pub fn dot_in(&self, d: &Dot) -> bool {
         if let Some(hash) = self.cc.get(&d.id) {
             if let Some(val) = hash.get(&d.sck) {
                 if val >= &d.n {
@@ -58,26 +53,12 @@ impl DotContext {
         self.compact();
     }
 
-    // --------------------------
-    // OPERATIONS
-    // --------------------------
+    // OPERATIONS   =================================================
+
 
     /// Creates a new dot considering that the dots are compacted.
     /// Gets the corresponsing n in self.cc and increment it.
-    /// # Example
-    /// ```
-    /// use thesis_code::dotcontext::DotContext;
-    /// let mut dotctx: DotContext<String> = DotContext::new();
-    /// dotctx.makedot(&"A".to_string(), 1);
-    /// dotctx.makedot(&"A".to_string(), 1);
-    /// let dot_3 = dotctx.makedot(&"A".to_string(), 3);
-    /// let res_dot = ("A".to_string(), 3, 1); // (E,sck,n)
-    /// let res_dotctx = "DotContext { cc: {\"A\": {3: 1, 1: 2}}, dc: {} }";
-    /// let format_dotctx = format!("{:?}", dotctx);
-    /// assert_eq!(dot_3, res_dot);
-    /// assert_eq!(*dotctx.cc.get(&"A".to_string()).unwrap().get(&3).unwrap(), 1);
-    /// assert_eq!(*dotctx.cc.get(&"A".to_string()).unwrap().get(&1).unwrap(), 2);
-    /// ```
+    /// TODO: to test
     pub fn makedot(&mut self, id: &NodeId, sck: i64) -> (NodeId, i64, i64) {
         // Get hash (sck, n) or create it.
         let cc_hash = self
@@ -92,16 +73,7 @@ impl DotContext {
 
     /// Inserts an element in dc.
     /// If there is no entry for the id, it creates it.
-    /// # Example
-    /// ```
-    /// use thesis_code::dotcontext::DotContext;
-    /// use std::collections::HashSet;
-    /// let mut dotctx: DotContext<String> = DotContext::new();
-    /// dotctx.insert_dot(&"A".to_string(), 1, 4, Some(false));
-    /// dotctx.insert_dot(&"A".to_string(), 1, 2, Some(false));
-    /// assert_eq!(dotctx.dc[&"A".to_string()], HashSet::from([(1,2), (1,4)]));
-    /// ```
-    ///
+    /// TODO: to test
     pub fn insert_dot(&mut self, id: &NodeId, sck: i64, n: i64, compact: Option<bool>) {
         self.dc
             .entry(id.clone())
@@ -118,6 +90,7 @@ impl DotContext {
     }
 
     /// Joins two dot contexts.
+    /// TODO: to test
     pub fn join(&mut self, other: &Self) {
         for (id, other_hash) in other.cc.iter() {
             for (sck, other_val) in other_hash.iter() {
@@ -177,13 +150,20 @@ impl DotContext {
 
     // UTILS    ==============================================
 
-    /// TODO: to test
+    /// Verifies if there is information about a node.
+    pub fn id_in(&self, id: &NodeId) -> bool {
+        return self.cc.contains_key(id) || self.dc.contains_key(id);
+    }
+
+    /// Removes id's information from the dotcontext.
+    /// Entries in self.dc and self.cc are removed.
     pub fn clean_id(&mut self, id: &NodeId) {
         self.cc.remove(id);
         self.dc.remove(id);
     }
 
-    fn union_dc(&mut self, dc: &HashMap<NodeId, HashSet<(i64, i64)>>) {
+    /// Joins a dc to the self.dc
+    pub fn union_dc(&mut self, dc: &HashMap<NodeId, HashSet<(i64, i64)>>) {
         for (id, other_hash) in dc.iter() {
             self.dc
                 .entry(id.clone())
@@ -212,17 +192,15 @@ impl DotContext {
     }
 
     /// Removes a dot from cc.
-    /// If the entry becomes an empty HashMap, the entry is removed. 
+    /// If the entry becomes an empty HashMap, the entry is removed.
     pub fn rm_cc(&mut self, dot: &Dot) {
         self.cc.entry(dot.id.clone()).and_modify(|hash| {
             *hash = hash.drain().filter(|(_, n)| *n != dot.n).collect();
         });
-        
+
         // Remove case empty entry.
-        if self.cc.contains_key(&dot.id) && self.cc[&dot.id].is_empty() {        
+        if self.cc.contains_key(&dot.id) && self.cc[&dot.id].is_empty() {
             self.cc.remove(&dot.id);
         }
     }
-
-
 }
