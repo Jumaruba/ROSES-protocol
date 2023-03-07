@@ -22,23 +22,13 @@ impl DotContext {
     }
 
     // STANDARD FUNCTIONS =======================================
- 
 
-    /// TODO: test
-    /// Get the value in the cc. If the entry doesn't exists, return 0.
-    pub fn get_cc_n(&self, id: &NodeId, sck: &i64) -> i64 {
+    /// Parses self.cc of a specific id to a HashSet<Dot>.
+    pub fn cc2set(&self, id: &NodeId) -> HashSet<Dot> {
+        let mut res: HashSet<Dot> = HashSet::new();
         self.cc
             .get(id)
-            .and_then(|hash| hash.get(sck))
-            .unwrap_or(&0)
-            .clone()
-    }
-
-    pub fn get_cc(&self, id: &NodeId) -> HashSet<Dot> {
-        let mut res: HashSet<Dot> = HashSet::new();
-        self.dc
-            .get(id)
-            .unwrap_or(&HashSet::new())
+            .unwrap_or(&HashMap::new())
             .iter()
             .for_each(|(sck, n)| {
                 res.insert(Dot {
@@ -49,13 +39,14 @@ impl DotContext {
             });
         res
     }
-    
+
     /// TODO: to test
     /// Compact removes the empty values?
     pub fn rm_cc_n(&mut self, dot: &Dot) {
-        self.cc.entry(dot.id.clone()).and_modify(|hash| {*hash = hash.drain().filter(|(_,n)| {*n != dot.n}).collect();});
+        self.cc.entry(dot.id.clone()).and_modify(|hash| {
+            *hash = hash.drain().filter(|(_, n)| *n != dot.n).collect();
+        });
     }
-
 
     /// Verifies if there is information about a node.
     pub fn has_seen(&self, id: &NodeId) -> bool {
@@ -79,7 +70,7 @@ impl DotContext {
     }
 
     pub fn rename_cc(&mut self, transl: (Dot, Dot)) {
-        if let Some(hash) = self.cc.get(&transl.0.id).clone(){
+        if let Some(hash) = self.cc.get(&transl.0.id).clone() {
             if let Some(n) = hash.get(&transl.0.sck).clone() {
                 if *n == transl.0.n {
                     self.insert_dot(&transl.1.id, transl.1.sck, transl.1.n, Some(false));

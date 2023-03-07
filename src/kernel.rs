@@ -53,13 +53,9 @@ where
         todo!()
     }
 
-    /// Gets the value in the causal context.
-    pub fn get_self_cc_n(&self, sck: &i64) -> i64 {
-        self.cc.get_cc_n(&self.id, sck)
-    }
     
     pub fn get_cc(&self) -> HashSet<Dot> {
-        self.cc.get_cc(&self.id)
+        self.cc.cc2set(&self.id)
     }
     
     /// TODO: to test
