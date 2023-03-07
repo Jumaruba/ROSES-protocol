@@ -118,7 +118,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn create_token(&mut self, other: &Self) {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.ck.sck {
             let slot_ck = other.slots[&self.id];
-            let cc = self.kernel.get_cc();
+            let cc = self.kernel.cc.cc2set(&self.id);
 
             let set = self
                 .kernel
@@ -218,9 +218,10 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Translation is discarded when the element was already translated. 
     pub fn discard_transl(&mut self, other: &Self){
         self.transl = self.transl.drain().filter(|(_, dst_dot)| {
-            !other.kernel.dot_in(&dst_dot)
+            !other.kernel.cc.dot_in(&dst_dot)
         }).collect();
     }
+
     // --------------------------
     // UTILS FUNCTIONS
     // --------------------------

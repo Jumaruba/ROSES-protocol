@@ -16,7 +16,7 @@ where
 {
     pub id: NodeId,
     pub elems: HashMap<NodeId, HashSet<TagElement<E>>>, 
-    cc: DotContext,
+    pub cc: DotContext,
 }
 
 impl<E> Kernel<E>
@@ -31,11 +31,6 @@ where
         }
     }
 
-    // --------------------------
-    // STANDARD FUNCTIONS
-    // Functions that modifies the structures.
-    // --------------------------
-
     /// Returns the set of a node.
     pub fn get_set(&self, id: &NodeId) -> Option<&HashSet<TagElement<E>>> {
         self.elems.get(id)
@@ -43,33 +38,14 @@ where
 
     /// Removes all the entries related to the id.
     /// Cleans both elements and dot context.
-    /// TODO: To test
     pub fn clean_id(&mut self, id: &NodeId) {
         self.elems.remove(id);
         self.cc.rm_id(id);
     }
 
-    pub fn get_last_tag(&self, sck: i64) -> i64 {
-        todo!()
-    }
-
-    
-    pub fn get_cc(&self) -> HashSet<Dot> {
-        self.cc.cc2set(&self.id)
-    }
-    
-    /// TODO: to test
     pub fn has_element(&self, id: &NodeId, tag: &TagElement<E>) -> bool {
         self.elems.contains_key(id) && self.elems[id].contains(tag)
     }
-
-    pub fn dot_in(&self, d: &Dot) -> bool{
-        self.cc.dot_in(d)
-    }
-    // --------------------------
-    // OPERATIONS
-    // CRDT's core operations. 
-    // --------------------------
 
     /// Gets elements of the kernel.
     /// TODO: to test
