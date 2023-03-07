@@ -215,8 +215,11 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// TODO
-    pub fn discard_transl(){
-
+    /// Translation is discarded when the element was already translated. 
+    pub fn discard_transl(&mut self, other: &Self){
+        self.transl = self.transl.drain().filter(|(_, dst_dot)| {
+            !other.kernel.dot_in(&dst_dot)
+        }).collect();
     }
     // --------------------------
     // UTILS FUNCTIONS

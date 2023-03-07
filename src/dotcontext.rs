@@ -20,9 +20,9 @@ impl DotContext {
             dc: HashMap::new(),
         }
     }
-    // --------------------------
-    // STANDARD FUNCTIONS
-    // --------------------------
+
+    // STANDARD FUNCTIONS =======================================
+ 
 
     /// TODO: test
     /// Get the value in the cc. If the entry doesn't exists, return 0.
@@ -56,9 +56,6 @@ impl DotContext {
         self.cc.entry(dot.id.clone()).and_modify(|hash| {*hash = hash.drain().filter(|(_,n)| {*n != dot.n}).collect();});
     }
 
-    // --------------------------
-    // STANDARD FUNCTIONS
-    // --------------------------
 
     /// Verifies if there is information about a node.
     pub fn has_seen(&self, id: &NodeId) -> bool {

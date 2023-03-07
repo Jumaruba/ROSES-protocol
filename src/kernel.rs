@@ -66,6 +66,10 @@ where
     pub fn has_element(&self, id: &NodeId, tag: &TagElement<E>) -> bool {
         self.elems.contains_key(id) && self.elems[id].contains(tag)
     }
+
+    pub fn dot_in(&self, d: &Dot) -> bool{
+        self.cc.dotin(d)
+    }
     // --------------------------
     // OPERATIONS
     // CRDT's core operations. 
