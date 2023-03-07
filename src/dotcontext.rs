@@ -23,22 +23,6 @@ impl DotContext {
 
     // STANDARD FUNCTIONS =======================================
 
-    /// Verifies if the received argument was already seen.
-    pub fn dot_in(&self, d: &Dot) -> bool {
-        if let Some(hash) = self.cc.get(&d.id) {
-            if let Some(val) = hash.get(&d.sck) {
-                if val >= &d.n {
-                    return true;
-                }
-            }
-        }
-        if let Some(set) = self.dc.get(&d.id) {
-            return set.contains(&(d.sck, d.n));
-        }
-
-        false
-    }
-
     /// Renames a cc element based in a translation.
     pub fn rename_cc(&mut self, transl: (Dot, Dot)) {
         if let Some(hash) = self.cc.get(&transl.0.id) {
@@ -60,23 +44,6 @@ impl DotContext {
                 self.add_dc(&transl.1, Some(true));
             }
         }
-    }
-
-    // OPERATIONS   =================================================
-
-    /// Creates a new dot considering that the dots are compacted.
-    /// Gets the corresponsing n in self.cc and increment it.
-    pub fn makedot(&mut self, id: &NodeId, sck: i64) -> Dot {
-        // Get hash (sck, n) or create it.
-        let cc_hash = self
-            .cc
-            .entry(id.clone())
-            .or_insert(HashMap::from([(sck, 0)]));
-
-        // Get n or create it.
-        cc_hash.entry(sck).and_modify(|val| *val += 1).or_insert(1);
-
-        Dot {id:id.clone(), sck:sck, n: cc_hash[&sck]}
     }
 
     /// Inserts an element in dc.
@@ -104,6 +71,34 @@ impl DotContext {
                 map.insert(dot.sck, dot.n);
             })
             .or_insert(HashMap::from([(dot.sck, dot.n)]));
+    }
+ 
+    /// Removes a dot from cc.
+    /// If the entry becomes an empty HashMap, the entry is removed.
+    pub fn rm_cc(&mut self, dot: &Dot) {
+        self.cc.entry(dot.id.clone()).and_modify(|hash| {
+            *hash = hash.drain().filter(|(_, n)| *n != dot.n).collect();
+        });
+
+        // Remove case empty entry.
+        if self.cc.contains_key(&dot.id) && self.cc[&dot.id].is_empty() {
+            self.cc.remove(&dot.id);
+        }
+    }
+ 
+    /// Creates a new dot considering that the dots are compacted.
+    /// Gets the corresponsing n in self.cc and increment it.
+    pub fn makedot(&mut self, id: &NodeId, sck: i64) -> Dot {
+        // Get hash (sck, n) or create it.
+        let cc_hash = self
+            .cc
+            .entry(id.clone())
+            .or_insert(HashMap::from([(sck, 0)]));
+
+        // Get n or create it.
+        cc_hash.entry(sck).and_modify(|val| *val += 1).or_insert(1);
+
+        Dot {id:id.clone(), sck:sck, n: cc_hash[&sck]}
     }
 
     /// Joins two dot contexts.
@@ -166,6 +161,39 @@ impl DotContext {
     }
 
     // UTILS    =====================================================
+  
+    /// Parses self.cc of a specific id to a HashSet<Dot>.
+    pub fn cc2set(&self, id: &NodeId) -> HashSet<Dot> {
+        let mut res: HashSet<Dot> = HashSet::new();
+        self.cc
+            .get(id)
+            .unwrap_or(&HashMap::new())
+            .iter()
+            .for_each(|(sck, n)| {
+                res.insert(Dot {
+                    id: id.clone(),
+                    sck: sck.clone(),
+                    n: n.clone(),
+                });
+            });
+        res
+    }
+
+    /// Verifies if the received argument was already seen.
+    pub fn dot_in(&self, d: &Dot) -> bool {
+        if let Some(hash) = self.cc.get(&d.id) {
+            if let Some(val) = hash.get(&d.sck) {
+                if val >= &d.n {
+                    return true;
+                }
+            }
+        }
+        if let Some(set) = self.dc.get(&d.id) {
+            return set.contains(&(d.sck, d.n));
+        }
+
+        false
+    }
 
     /// Verifies if there is information about a node.
     pub fn id_in(&self, id: &NodeId) -> bool {
@@ -191,36 +219,5 @@ impl DotContext {
         }
     }
 
-    /// Parses self.cc of a specific id to a HashSet<Dot>.
-    pub fn cc2set(&self, id: &NodeId) -> HashSet<Dot> {
-        let mut res: HashSet<Dot> = HashSet::new();
-        self.cc
-            .get(id)
-            .unwrap_or(&HashMap::new())
-            .iter()
-            .for_each(|(sck, n)| {
-                res.insert(Dot {
-                    id: id.clone(),
-                    sck: sck.clone(),
-                    n: n.clone(),
-                });
-            });
-        res
-    }
-
-    /// Removes a dot from cc.
-    /// If the entry becomes an empty HashMap, the entry is removed.
-    pub fn rm_cc(&mut self, dot: &Dot) {
-        self.cc.entry(dot.id.clone()).and_modify(|hash| {
-            *hash = hash.drain().filter(|(_, n)| *n != dot.n).collect();
-        });
-
-        // Remove case empty entry.
-        if self.cc.contains_key(&dot.id) && self.cc[&dot.id].is_empty() {
-            self.cc.remove(&dot.id);
-        }
-    }
-
-   
 
 }
