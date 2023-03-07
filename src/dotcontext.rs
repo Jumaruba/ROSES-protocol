@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
 use crate::nodeId::NodeId;
-use crate::types::dot::Dot;
+use crate::types::Dot;
 
 /// Tries to optimize mapping.
 /// Inspired in: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc

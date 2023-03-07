@@ -11,3 +11,4 @@ pub mod handoff;
 use handoff::Handoff;
 
 pub mod types;
+use types::{Ck, Dot, TagElement};

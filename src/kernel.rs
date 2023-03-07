@@ -1,5 +1,4 @@
-use crate::types::dot::Dot;
-use crate::types::tag_element::TagElement;
+use crate::types::{TagElement, Dot};
 use crate::{DotContext, NodeId};
 use core::hash::Hash;
 use std::fmt::Debug;

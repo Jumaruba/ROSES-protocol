@@ -4,19 +4,16 @@ use std::hash::Hash;
 
 use crate::kernel::Kernel;
 use crate::nodeId::NodeId;
-use crate::types::ck::Ck;
-use crate::types::dot::Dot;
-use crate::types::tag_element::TagElement;
+use crate::types::{Ck, Dot, TagElement};
 
 #[derive(Debug)]
 pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     id: NodeId,
     kernel: Kernel<E>,
-    sck: i64,
-    pub dck: i64,
+    pub ck: Ck, 
     pub slots: HashMap<NodeId, Ck>,
-    tokens: HashMap<(NodeId, NodeId), (Ck, HashSet<Dot>, HashSet<TagElement<E>>)>, // (sck, dck, tag, (sck, tag, E))
-    pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)
+    tokens: HashMap<(NodeId, NodeId), (Ck, HashSet<Dot>, HashSet<TagElement<E>>)>, 
+    pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)  // TODO: create a type for this.
     tier: i32,
 }
 
@@ -25,8 +22,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         Self {
             id: id.clone(),
             kernel: Kernel::new(&id),
-            sck: 1,
-            dck: 1,
+            ck: Ck{sck: 0, dck: 0},
             slots: HashMap::new(),
             tokens: HashMap::new(),
             transl: HashSet::new(),
@@ -57,7 +53,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Adds an element to the node.
     /// TODO: to test
     pub fn add(&mut self, elem: E) -> TagElement<E> {
-        self.kernel.add(elem, self.sck)
+        self.kernel.add(elem, self.ck.sck)
     }
 
     /// Removes an element
@@ -109,18 +105,18 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             self.slots.insert(
                 other.id.clone(),
                 Ck {
-                    sck: other.sck,
-                    dck: self.dck,
+                    sck: other.ck.sck,
+                    dck: self.ck.dck,
                 },
             );
-            self.dck += 1;
+            self.ck.dck += 1;
         }
     }
 
     /// Creates a token in case there is a match slot in the other node.
     /// TESTED
     pub fn create_token(&mut self, other: &Self) {
-        if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.sck {
+        if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.ck.sck {
             let slot_ck = other.slots[&self.id];
             let cc = self.kernel.get_cc();
 
@@ -134,7 +130,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             self.tokens
                 .insert((self.id.clone(), other.id.clone()), (slot_ck, cc, set));
             self.kernel.clean_id(&self.id);
-            self.sck += 1;
+            self.ck.sck += 1;
         }
     }
 
@@ -162,7 +158,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         other_elems
             .iter()
             .for_each(|o_tag_element| {
-                let s_tag_element = self.kernel.add(o_tag_element.elem.clone(), self.sck);
+                let s_tag_element = self.kernel.add(o_tag_element.elem.clone(), self.ck.sck);
                 self.transl.insert((
                     other_id.clone(),
                     o_tag_element.sck.clone(),
@@ -177,7 +173,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Discards a slot that can never be filled, since sck is higher than the one marked in the slot.
     pub fn discard_slot(&mut self, other: &Self) {
         if let Some(&ck) = self.slots.get(&other.id) {
-            if other.sck > ck.sck{
+            if other.ck.sck > ck.sck{
                 self.slots.remove(&other.id);
             }
         }
@@ -200,7 +196,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 !(*dst == other.id
                     && match other.slots.get(&src) {
                         Some(&slot_ck) => slot_ck.dck > token_ck.dck,
-                        None => other.dck > token_ck.dck,
+                        None => other.ck.dck > token_ck.dck,
                     })
             })
             .collect();
