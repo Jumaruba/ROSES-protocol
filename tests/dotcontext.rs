@@ -367,3 +367,28 @@ pub fn makedot_2() {
     );
 }
 
+#[test]
+pub fn join_1(){
+    let mut dc2 = get_dotcontext_2();
+    let dc2_clone = get_dotcontext_2();
+    let mut dc3 = get_dotcontext_3(); 
+
+    dc2.join(&dc3);
+    dc3.join(&dc2_clone);
+
+    let res_dc = HashMap::from([
+        (id("B"), HashSet::from([(4, 7), (4,9)])),
+        (id("C"), HashSet::from([(2, 4)])),
+    ]);
+
+    let res_cc = HashMap::from([
+        (id("B"), HashMap::from([(4,5)])),
+        (id("A"), HashMap::from([(3,4),(2,8)]))
+    ]);
+
+    assert_eq!(dc2.cc, res_cc);
+    assert_eq!(dc3.cc, res_cc);
+    assert_eq!(dc2.dc, res_dc);
+    assert_eq!(dc3.dc, res_dc);
+}
+

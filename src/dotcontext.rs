@@ -66,7 +66,6 @@ impl DotContext {
 
     /// Creates a new dot considering that the dots are compacted.
     /// Gets the corresponsing n in self.cc and increment it.
-    /// TODO: to test
     pub fn makedot(&mut self, id: &NodeId, sck: i64) -> Dot {
         // Get hash (sck, n) or create it.
         let cc_hash = self
@@ -108,7 +107,6 @@ impl DotContext {
     }
 
     /// Joins two dot contexts.
-    /// TODO: to test
     pub fn join(&mut self, other: &Self) {
         for (id, other_hash) in other.cc.iter() {
             for (sck, other_val) in other_hash.iter() {
@@ -125,7 +123,6 @@ impl DotContext {
         self.compact();
     }
 
-    /// TODO: make more tests on this.
     pub fn compact(&mut self) {
         let mut repeat: bool = true;
         while repeat {
@@ -164,6 +161,8 @@ impl DotContext {
                     .collect();
             }
         }
+        // Remove entries with empty values
+        self.dc = self.dc.drain().filter(|(_, hash)| {!hash.is_empty()}).collect();
     }
 
     // UTILS    =====================================================
