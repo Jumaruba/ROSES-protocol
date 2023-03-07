@@ -46,7 +46,7 @@ where
     /// TODO: To test
     pub fn clean_id(&mut self, id: &NodeId) {
         self.elems.remove(id);
-        self.cc.clean_id(id);
+        self.cc.rm_id(id);
     }
 
     pub fn get_last_tag(&self, sck: i64) -> i64 {

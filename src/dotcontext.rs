@@ -23,9 +23,7 @@ impl DotContext {
 
     // STANDARD FUNCTIONS =======================================
 
-
     /// Verifies if the received argument was already seen.
-    /// TODO: to test
     pub fn dot_in(&self, d: &Dot) -> bool {
         if let Some(hash) = self.cc.get(&d.id) {
             if let Some(val) = hash.get(&d.sck) {
@@ -41,20 +39,29 @@ impl DotContext {
         false
     }
 
+    /// Renames a cc element based in a translation.
     pub fn rename_cc(&mut self, transl: (Dot, Dot)) {
-        if let Some(hash) = self.cc.get(&transl.0.id).clone() {
-            if let Some(n) = hash.get(&transl.0.sck).clone() {
+        if let Some(hash) = self.cc.get(&transl.0.id) {
+            if let Some(n) = hash.get(&transl.0.sck) {
                 if *n == transl.0.n {
-                    self.insert_dot(&transl.1.id, transl.1.sck, transl.1.n, Some(false));
+                    self.add_cc(transl.1);
                     self.rm_cc(&transl.0);
                 }
             }
         }
-        self.compact();
     }
 
+    /// TODO: to test
+    pub fn rename_dc(&mut self, transl: (Dot, Dot)) {
+        if let Some(hash) = self.dc.get_mut(&transl.0.id) {
+            let tuple = (transl.0.sck, transl.0.n);
+            if hash.contains(&tuple) {
+                hash.remove(&tuple);
+                self.add_dc(&transl.1.id, transl.1.sck, transl.1.n, Some(true));
+            }
+        }
+    }
     // OPERATIONS   =================================================
-
 
     /// Creates a new dot considering that the dots are compacted.
     /// Gets the corresponsing n in self.cc and increment it.
@@ -74,7 +81,7 @@ impl DotContext {
     /// Inserts an element in dc.
     /// If there is no entry for the id, it creates it.
     /// TODO: to test
-    pub fn insert_dot(&mut self, id: &NodeId, sck: i64, n: i64, compact: Option<bool>) {
+    pub fn add_dc(&mut self, id: &NodeId, sck: i64, n: i64, compact: Option<bool>) {
         self.dc
             .entry(id.clone())
             .and_modify(|hash| {
@@ -87,6 +94,16 @@ impl DotContext {
             Some(false) => return,
             None => self.compact(),
         }
+    }
+ 
+    /// Adds an entry to cc.
+    pub fn add_cc(&mut self, dot: Dot) {
+        self.cc
+            .entry(dot.id)
+            .and_modify(|map| {
+                map.insert(dot.sck, dot.n);
+            })
+            .or_insert(HashMap::from([(dot.sck, dot.n)]));
     }
 
     /// Joins two dot contexts.
@@ -148,7 +165,7 @@ impl DotContext {
         }
     }
 
-    // UTILS    ==============================================
+    // UTILS    =====================================================
 
     /// Verifies if there is information about a node.
     pub fn id_in(&self, id: &NodeId) -> bool {
@@ -157,7 +174,7 @@ impl DotContext {
 
     /// Removes id's information from the dotcontext.
     /// Entries in self.dc and self.cc are removed.
-    pub fn clean_id(&mut self, id: &NodeId) {
+    pub fn rm_id(&mut self, id: &NodeId) {
         self.cc.remove(id);
         self.dc.remove(id);
     }
@@ -203,4 +220,7 @@ impl DotContext {
             self.cc.remove(&dot.id);
         }
     }
+
+   
+
 }

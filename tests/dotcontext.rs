@@ -123,9 +123,9 @@ pub fn union_dc_1() {
     dc3.union_dc(&dc2.dc);
 
     let res = HashMap::from([
-        (id("A"), HashSet::from([(2,7), (2,5)])),
-        (id("B"), HashSet::from([(4, 7), (4,9)])),
-        (id("C"), HashSet::from([(2,4)]))
+        (id("A"), HashSet::from([(2, 7), (2, 5)])),
+        (id("B"), HashSet::from([(4, 7), (4, 9)])),
+        (id("C"), HashSet::from([(2, 4)])),
     ]);
 
     assert_eq!(res, dc2_union.dc);
@@ -134,9 +134,9 @@ pub fn union_dc_1() {
 
 /// Removes an existent id.
 #[test]
-pub fn clean_id_1(){
+pub fn clean_id_1() {
     let mut dc2 = get_dotcontext_2();
-    dc2.clean_id(&id("A"));
+    dc2.rm_id(&id("A"));
 
     let mut res = DotContext::new();
     dotcontext_add_cc_vals(&mut res, &[("B", 4, 5)]);
@@ -147,9 +147,9 @@ pub fn clean_id_1(){
 
 /// Removes an inexistent id.
 #[test]
-pub fn clean_id_2(){
+pub fn clean_id_2() {
     let mut dc2 = get_dotcontext_2();
-    dc2.clean_id(&id("C"));
+    dc2.rm_id(&id("C"));
 
     let res = get_dotcontext_2();
 
@@ -157,40 +157,182 @@ pub fn clean_id_2(){
 }
 
 #[test]
-pub fn has_seen_1(){
-    let dc1 = get_dotcontext_1(); 
+pub fn has_seen_1() {
+    let dc1 = get_dotcontext_1();
     let curr = dc1.id_in(&id("A"));
     assert!(curr);
 }
 
 #[test]
-pub fn has_seen_2(){
-    let dc2 = get_dotcontext_2(); 
+pub fn has_seen_2() {
+    let dc2 = get_dotcontext_2();
     let curr = dc2.id_in(&id("A"));
     assert!(curr);
 }
 
 #[test]
-pub fn has_seen_3(){
-    let dc3 = get_dotcontext_3(); 
+pub fn has_seen_3() {
+    let dc3 = get_dotcontext_3();
     let curr = dc3.id_in(&id("A"));
     assert!(curr);
 }
 
 #[test]
-pub fn has_seen_4(){
-    let dc1 = get_dotcontext_1(); 
+pub fn has_seen_4() {
+    let dc1 = get_dotcontext_1();
     let curr = dc1.id_in(&id("D"));
     assert!(!curr);
 }
 
 #[test]
-pub fn has_seen_5(){
-    let dc2 = get_dotcontext_2(); 
+pub fn has_seen_5() {
+    let dc2 = get_dotcontext_2();
     let curr = dc2.id_in(&id("D"));
     assert!(!curr);
 }
 
-pub fn dot_in(){
-    
+#[test]
+pub fn dot_in_1() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.dot_in(&Dot {
+        id: id("A"),
+        sck: 2,
+        n: 3,
+    });
+    assert!(curr);
+}
+
+#[test]
+pub fn dot_in_2() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.dot_in(&Dot {
+        id: id("A"),
+        sck: 2,
+        n: 4,
+    });
+    assert!(!curr);
+}
+
+#[test]
+pub fn dot_in_3() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.dot_in(&Dot {
+        id: id("A"),
+        sck: 2,
+        n: 2,
+    });
+    assert!(curr);
+}
+
+#[test]
+pub fn dot_in_4() {
+    let dc2 = get_dotcontext_2();
+    let curr = dc2.dot_in(&Dot {
+        id: id("A"),
+        sck: 2,
+        n: 5,
+    });
+    assert!(curr);
+}
+
+#[test]
+pub fn rename_cc_1() {
+    let mut dc1 = get_dotcontext_1();
+    let transl = (
+        Dot {
+            id: id("A"),
+            sck: 2,
+            n: 3,
+        },
+        Dot {
+            id: id("C"),
+            sck: 2,
+            n: 4,
+        },
+    );
+    dc1.rename_cc(transl);
+
+    let res = HashMap::from([
+        (id("A"), HashMap::from([(3, 4)])),
+        (id("B"), HashMap::from([(4, 5)])),
+        (id("C"), HashMap::from([(2, 4)])),
+    ]);
+
+    assert_eq!(res, dc1.cc);
+}
+
+#[test]
+pub fn rename_cc_2() {
+    let mut dc1 = get_dotcontext_1();
+    let transl = (
+        Dot {
+            id: id("A"),
+            sck: 2,
+            n: 8,
+        },
+        Dot {
+            id: id("C"),
+            sck: 2,
+            n: 4,
+        },
+    );
+    dc1.rename_cc(transl);
+
+    let res = HashMap::from([
+        (id("A"), HashMap::from([(3, 4), (2, 3)])),
+        (id("B"), HashMap::from([(4, 5)])),
+    ]);
+
+    assert_eq!(res, dc1.cc);
+}
+
+#[test]
+pub fn rename_dc_1() {
+    let mut dc2 = get_dotcontext_2();
+    let transl = (
+        Dot {
+            id: id("A"),
+            sck: 2,
+            n: 5,
+        },
+        Dot {
+            id: id("C"),
+            sck: 2,
+            n: 4,
+        },
+    );
+    dc2.rename_dc(transl);
+
+    let res = HashMap::from([
+        (id("A"), HashSet::from([(2, 7)])),
+        (id("B"), HashSet::from([(4, 7)])),
+        (id("C"), HashSet::from([(2, 4)])),
+    ]);
+
+    assert_eq!(res, dc2.dc);
+}
+
+#[test]
+pub fn rename_dc_2() {
+    let mut dc2 = get_dotcontext_2();
+    let transl = (
+        Dot {
+            id: id("A"),
+            sck: 2,
+            n: 8,
+        },
+        Dot {
+            id: id("C"),
+            sck: 2,
+            n: 4,
+        },
+    );
+    dc2.rename_dc(transl);
+
+    let res = HashMap::from([
+        (id("A"), HashSet::from([(2, 7), (2, 5)])),
+        (id("B"), HashSet::from([(4, 7)])),
+    ]);
+
+    assert_eq!(res, dc2.dc);
 }
