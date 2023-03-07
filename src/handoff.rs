@@ -13,7 +13,7 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     pub ck: Ck, 
     pub slots: HashMap<NodeId, Ck>,
     tokens: HashMap<(NodeId, NodeId), (Ck, HashSet<Dot>, HashSet<TagElement<E>>)>, 
-    pub transl: HashSet<(NodeId, i64, i64, NodeId, i64, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)  // TODO: create a type for this.
+    pub transl: HashSet<(Dot, Dot)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)  // TODO: create a type for this.
     tier: i32,
 }
 
@@ -160,12 +160,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             .for_each(|o_tag_element| {
                 let s_tag_element = self.kernel.add(o_tag_element.elem.clone(), self.ck.sck);
                 self.transl.insert((
-                    other_id.clone(),
-                    o_tag_element.sck.clone(),
-                    o_tag_element.n.clone(),
-                    self.id.clone(),
-                    s_tag_element.sck,
-                    s_tag_element.n,
+                    Dot{id: other_id.clone(), sck: o_tag_element.sck.clone(), n: o_tag_element.n.clone()},
+                    Dot{id: self.id.clone(), sck: s_tag_element.sck, n: s_tag_element.n}
                 ));
             });
     }
