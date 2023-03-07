@@ -41,10 +41,21 @@ impl DotContext {
             .unwrap_or(&HashSet::new())
             .iter()
             .for_each(|(sck, n)| {
-                res.insert(Dot{id: id.clone(), sck: sck.clone(), n: n.clone()});
+                res.insert(Dot {
+                    id: id.clone(),
+                    sck: sck.clone(),
+                    n: n.clone(),
+                });
             });
         res
     }
+    
+    /// TODO: to test
+    /// Compact removes the empty values?
+    pub fn rm_cc_n(&mut self, dot: &Dot) {
+        self.cc.entry(dot.id.clone()).and_modify(|hash| {*hash = hash.drain().filter(|(_,n)| {*n != dot.n}).collect();});
+    }
+
     // --------------------------
     // STANDARD FUNCTIONS
     // --------------------------
@@ -68,6 +79,18 @@ impl DotContext {
         }
 
         false
+    }
+
+    pub fn rename_cc(&mut self, transl: (Dot, Dot)) {
+        if let Some(hash) = self.cc.get(&transl.0.id).clone(){
+            if let Some(n) = hash.get(&transl.0.sck).clone() {
+                if *n == transl.0.n {
+                    self.insert_dot(&transl.1.id, transl.1.sck, transl.1.n, Some(false));
+                    self.rm_cc_n(&transl.0);
+                }
+            }
+        }
+        self.compact();
     }
 
     // --------------------------
@@ -114,13 +137,13 @@ impl DotContext {
     /// assert_eq!(dotctx.dc[&"A".to_string()], HashSet::from([(1,2), (1,4)]));
     /// ```
     ///
-    pub fn insert_dot(&mut self, id: &NodeId, sck: i64, tag: i64, compact: Option<bool>) {
+    pub fn insert_dot(&mut self, id: &NodeId, sck: i64, n: i64, compact: Option<bool>) {
         self.dc
             .entry(id.clone())
             .and_modify(|hash| {
-                hash.insert((sck, tag));
+                hash.insert((sck, n));
             })
-            .or_insert(HashSet::from([(sck, tag)]));
+            .or_insert(HashSet::from([(sck, n)]));
 
         match compact {
             Some(true) => self.compact(),

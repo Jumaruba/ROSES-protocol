@@ -160,11 +160,12 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             .for_each(|o_tag_element| {
                 let s_tag_element = self.kernel.add(o_tag_element.elem.clone(), self.ck.sck);
                 self.transl.insert((
-                    Dot{id: other_id.clone(), sck: o_tag_element.sck.clone(), n: o_tag_element.n.clone()},
-                    Dot{id: self.id.clone(), sck: s_tag_element.sck, n: s_tag_element.n}
+                Dot{id: other_id.clone(), sck: o_tag_element.sck.clone(), n: o_tag_element.n.clone()},
+                Dot{id: self.id.clone(), sck: s_tag_element.sck, n: s_tag_element.n}
                 ));
             });
-    }
+        }
+
 
     /// Discards a slot that can never be filled, since sck is higher than the one marked in the slot.
     pub fn discard_slot(&mut self, other: &Self) {
@@ -203,12 +204,19 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn aggregate(&mut self, other: &Self) {}
 
     /// Applies translatiosn that came from the other node.
+    /// TODO: to test
     pub fn translate(&mut self, other: &Self) {
-        if self.tier >= other.tier {}
+        other.transl.iter().for_each(|transl| self.kernel.rename(transl)); 
     }
 
+    /// TODO
     pub fn cache_tokens(&mut self, other: &Self) {
         todo!()
+    }
+
+    /// TODO
+    pub fn discard_transl(){
+
     }
     // --------------------------
     // UTILS FUNCTIONS

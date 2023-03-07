@@ -61,6 +61,11 @@ where
     pub fn get_cc(&self) -> HashSet<Dot> {
         self.cc.get_cc(&self.id)
     }
+    
+    /// TODO: to test
+    pub fn has_element(&self, id: &NodeId, tag: &TagElement<E>) -> bool {
+        self.elems.contains_key(id) && self.elems[id].contains(tag)
+    }
     // --------------------------
     // OPERATIONS
     // CRDT's core operations. 
@@ -107,8 +112,33 @@ where
         });
     }
 
-    pub fn join(&mut self, other: & Self) {
-        todo!()
+    /// TODO: to test
+    pub fn rename(&mut self, transl: &(Dot, Dot)){
+        self.cc.rename_cc(transl.clone());
+        self.rename_elems(transl);
+    }
+
+    /// TODO: To test
+    pub fn join(&mut self, other: &Self) {
+        // Intersections and elements not known by other.
+        self.elems.iter_mut().for_each(|(id, hash)| {
+            *hash = hash.drain().filter(|tag| {
+                other.has_element(&id, &tag) || !other.cc.dotin(&Dot{id: id.clone(), sck:tag.sck, n:tag.n})
+            }).collect();
+        });
+
+        // Elements known by other but not by self
+        for (id, hash) in other.elems.iter(){
+            for tag in hash.iter() {
+                let dot = Dot{id: id.clone(), sck: tag.sck, n: tag.sck};
+                if !self.cc.dotin(&dot) {
+                    self.elems.entry(id.clone()).and_modify(|val| {
+                        val.insert(tag.clone());
+                    }).or_insert(HashSet::from([tag.clone()]));
+                }
+            }
+        }
+        self.cc.join(&other.cc);
     }
 
     // --------------------------
@@ -118,5 +148,19 @@ where
     /// Returns true if the node has ever received information about it, and false otherwise.
     pub fn has_seen(&self, id: &NodeId) -> bool {
         self.cc.has_seen(id)
+    }
+
+    /// TODO : to test and improve
+    pub fn rename_elems(&mut self, transl: &(Dot, Dot)){
+        let mut to_add: HashSet<(Dot, E)> = HashSet::new();
+        self.elems.entry(transl.0.id.clone()).and_modify(|hash| {
+            *hash = hash.drain().filter(|entries| {
+                if entries.n != transl.0.n && entries.sck != transl.0.sck {
+                    to_add.insert((transl.1.clone(), entries.elem.clone()));
+                    return true; 
+                }
+                return false;
+            }).collect();
+        });
     }
 }
