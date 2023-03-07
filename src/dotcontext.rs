@@ -51,43 +51,44 @@ impl DotContext {
         }
     }
 
-    /// TODO: to test
+    /// Renames a cc element based in a translation.
     pub fn rename_dc(&mut self, transl: (Dot, Dot)) {
         if let Some(hash) = self.dc.get_mut(&transl.0.id) {
             let tuple = (transl.0.sck, transl.0.n);
             if hash.contains(&tuple) {
                 hash.remove(&tuple);
-                self.add_dc(&transl.1.id, transl.1.sck, transl.1.n, Some(true));
+                self.add_dc(&transl.1, Some(true));
             }
         }
     }
+
     // OPERATIONS   =================================================
 
     /// Creates a new dot considering that the dots are compacted.
     /// Gets the corresponsing n in self.cc and increment it.
     /// TODO: to test
-    pub fn makedot(&mut self, id: &NodeId, sck: i64) -> (NodeId, i64, i64) {
+    pub fn makedot(&mut self, id: &NodeId, sck: i64) -> Dot {
         // Get hash (sck, n) or create it.
         let cc_hash = self
             .cc
             .entry(id.clone())
             .or_insert(HashMap::from([(sck, 0)]));
+
         // Get n or create it.
         cc_hash.entry(sck).and_modify(|val| *val += 1).or_insert(1);
 
-        (id.clone(), sck, cc_hash[&sck])
+        Dot {id:id.clone(), sck:sck, n: cc_hash[&sck]}
     }
 
     /// Inserts an element in dc.
     /// If there is no entry for the id, it creates it.
-    /// TODO: to test
-    pub fn add_dc(&mut self, id: &NodeId, sck: i64, n: i64, compact: Option<bool>) {
+    pub fn add_dc(&mut self, dot: &Dot, compact: Option<bool>) {
         self.dc
-            .entry(id.clone())
+            .entry(dot.id.clone())
             .and_modify(|hash| {
-                hash.insert((sck, n));
+                hash.insert((dot.sck, dot.n));
             })
-            .or_insert(HashSet::from([(sck, n)]));
+            .or_insert(HashSet::from([(dot.sck, dot.n)]));
 
         match compact {
             Some(true) => self.compact(),

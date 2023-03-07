@@ -86,8 +86,8 @@ where
     /// Adds an element with key equals to self.id and return the added entry.
     /// TODO: to test
     pub fn add(&mut self, elem: E, sck: i64) -> TagElement<E> {
-        let (_, _, n) = self.cc.makedot(&self.id, sck);
-        let tag_element = TagElement {sck, n, elem};
+        let dot = self.cc.makedot(&self.id, sck);
+        let tag_element = TagElement {sck, n: dot.n, elem};
 
         self.elems
             .entry(self.id.clone())
@@ -115,6 +115,7 @@ where
     /// TODO: to test
     pub fn rename(&mut self, transl: &(Dot, Dot)){
         self.cc.rename_cc(transl.clone());
+        self.cc.rename_dc(transl.clone());
         self.rename_elems(transl);
     }
 

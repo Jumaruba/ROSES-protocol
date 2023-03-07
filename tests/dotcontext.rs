@@ -336,3 +336,34 @@ pub fn rename_dc_2() {
 
     assert_eq!(res, dc2.dc);
 }
+
+/// Id entry exists
+#[test]
+pub fn makedot_1() {
+    let mut dc1 = get_dotcontext_1();
+    let dot = dc1.makedot(&id("A"), 3);
+    assert_eq!(
+        Dot {
+            id: id("A"),
+            sck: 3,
+            n: 5
+        },
+        dot
+    );
+}
+
+/// Id entry does not exists
+#[test]
+pub fn makedot_2() {
+    let mut dc1 = get_dotcontext_1();
+    let dot = dc1.makedot(&id("B"), 2);
+    assert_eq!(
+        Dot {
+            id: id("B"),
+            sck: 2,
+            n: 1
+        },
+        dot
+    );
+}
+
