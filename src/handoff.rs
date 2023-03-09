@@ -63,7 +63,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.kernel.rm(&elem);
     }
 
-    pub fn merge(&mut self, other: &mut Self) {
+    pub fn merge(&mut self, other: &Self) {
         self.fill_slots(other);
         self.discard_slot(other);
         self.create_slot(other);
@@ -71,7 +71,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         // aggregate
         self.discard_slot(other);
         self.create_token(other);
-        self.cache_tokens(other);
+        //self.cache_tokens(other);
     }
 
     // --------------------------
@@ -201,7 +201,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// Updates the values in set and cc.
-    pub fn aggregate(&mut self, other: &Self) {}
+    pub fn aggregate(&mut self, other: &Self) {
+        self.kernel.join(&other.kernel);
+    }
 
     /// Applies translatiosn that came from the other node.
     /// TODO: to test
