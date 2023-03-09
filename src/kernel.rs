@@ -139,5 +139,7 @@ where
                 return false;
             }).collect();
         });
+
+        self.elems = self.elems.drain().filter(|(_, hash)| {!hash.is_empty()}).collect();
     }
 }

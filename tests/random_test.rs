@@ -29,7 +29,7 @@ pub fn get_rand_oper() -> Op<i32> {
 /// Generates a random vector of operations, which can be applied in any register based crdt.
 pub fn gen_rnd_opers() -> Vec<Op<i32>> {
     let mut rng = rand::thread_rng();
-    let n_operations = 2; //rng.gen_range(0..100);
+    let n_operations = 1; //rng.gen_range(0..100);
     let mut operations = Vec::new();
 
     for _ in 0..n_operations {
@@ -54,22 +54,26 @@ pub fn apply_aworset_oper(aworset_opt: &mut AworsetOpt<i32>, oper: Op<i32>) {
 pub fn apply_handoff_oper(handoff_t0: &mut Handoff<i32>, handoff_t1: &mut Handoff<i32>, oper: Op<i32>) {
     match oper {
         RM(elem) => {
-            handoff_t0.add(elem);
+            handoff_t1.rm(elem);
         }
         ADD(elem) => {
-            handoff_t0.add(elem);
+            handoff_t1.add(elem);
         }
     }
-    handoff_t1.merge(handoff_t0);           // Create slot
-    handoff_t0.merge(handoff_t1);           // Create token
-    handoff_t1.merge(handoff_t0);           // Fill slot
-    handoff_t0.merge(handoff_t1);           // Discard token
+    handoff_t0.merge(handoff_t1);           // Create slot
+    println!("CREATE SLOT, t0:: {:?}", handoff_t0);
+    handoff_t1.merge(handoff_t0);           // Create token
+    println!("CREATE TOKEN, t1:: {:?}", handoff_t1);
+    handoff_t0.merge(handoff_t1);           // Fill slot
+    println!("CREATE FILL SLOT, t0:: {:?}", handoff_t0);
+    handoff_t1.merge(handoff_t0);           // Discard token
+    println!("DISCARD TOKEN, t1:: {:?}", handoff_t1);
 
 }
 
 #[test]
 pub fn test() {
-    let mut handoff_t0: Handoff<i32> = Handoff::new(id("A"), 1);
+    let mut handoff_t0: Handoff<i32> = Handoff::new(id("A"), 0);
     let mut handoff_t1: Handoff<i32> = Handoff::new(id("B"), 1);
     let mut aworset_opt: AworsetOpt<i32> =
         AworsetOpt::new(crdt_sample::NodeId::new(1, "C".to_string()));
@@ -84,5 +88,4 @@ pub fn test() {
         println!("> AWORSET{:?}\n", aworset_opt);
     }
 
-    println!("{:?}", gen_rnd_opers());
 }
