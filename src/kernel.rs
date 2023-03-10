@@ -15,7 +15,7 @@ where
     E: Eq + Display + Clone + Hash + Debug,
 {
     pub id: NodeId,
-    pub elems: HashMap<NodeId, HashSet<TagElement<E>>>, 
+    pub elems: HashMap<NodeId, HashSet<TagElement<E>>>,     // This format makes easier to create tokens.
     pub cc: DotContext,
 }
 
@@ -31,16 +31,12 @@ where
         }
     }
 
-    /// Returns the set of a node.
-    pub fn get_set(&self, id: &NodeId) -> Option<&HashSet<TagElement<E>>> {
-        self.elems.get(id)
-    }
 
     /// Removes all the entries related to the id.
     /// Cleans both elements and dot context.
-    pub fn clean_id(&mut self, id: &NodeId) {
+    pub fn clean_id(&mut self, id: &NodeId, sck: i64) {
         self.elems.remove(id);
-        self.cc.rm_id(id);
+        self.cc.rm_id(id, sck);
     }
 
     pub fn has_element(&self, id: &NodeId, tag: &TagElement<E>) -> bool {
@@ -88,13 +84,6 @@ where
         });
     }
 
-    /// TODO: to test
-    pub fn rename(&mut self, transl: &(Dot, Dot)){
-        self.cc.rename_cc(transl.clone());
-        self.cc.rename_dc(transl.clone());
-        self.rename_elems(transl);
-    }
-
     /// TODO: To test
     pub fn join(&mut self, other: &Self) {
         // Intersections and elements not known by other.
@@ -123,23 +112,8 @@ where
     // --------------------------
 
     /// Returns true if the node has ever received information about it, and false otherwise.
-    pub fn has_seen(&self, id: &NodeId) -> bool {
-        self.cc.id_in(id)
+    pub fn has_seen(&self, id: &NodeId, sck: i64) -> bool {
+        self.cc.id_in(id, sck)
     }
 
-    /// TODO : to test and improve
-    pub fn rename_elems(&mut self, transl: &(Dot, Dot)){
-        let mut to_add: HashSet<(Dot, E)> = HashSet::new();
-        self.elems.entry(transl.0.id.clone()).and_modify(|hash| {
-            *hash = hash.drain().filter(|entries| {
-                if entries.n != transl.0.n && entries.sck != transl.0.sck {
-                    to_add.insert((transl.1.clone(), entries.elem.clone()));
-                    return true; 
-                }
-                return false;
-            }).collect();
-        });
-
-        self.elems = self.elems.drain().filter(|(_, hash)| {!hash.is_empty()}).collect();
-    }
 }
