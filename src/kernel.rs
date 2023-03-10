@@ -107,6 +107,9 @@ where
         self.cc.join(&other.cc);
     }
 
+    pub fn insert_cc(&mut self, dot: &Dot){
+        self.cc.cc.insert((dot.id.clone(), dot.sck), dot.n);
+    }
     // --------------------------
     // UTILS
     // --------------------------

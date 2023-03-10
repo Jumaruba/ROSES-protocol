@@ -9,8 +9,8 @@ use crate::types::Dot;
 /// Inspired in: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DotContext {
-    pub cc: HashMap<(NodeId, i64), i64>, // Compact Context. {(id, sck) -> tag}}. Makes it easier to create tokens.
-    pub dc: HashSet<Dot>, // Dot cloud. Not supposed to be many, it's ok to be a hashset.
+    pub cc: HashMap<(NodeId, i64), i64>, // Compact Context. {(id, sck) -> tag}}. This struct makes it easier to create tokens.
+    pub dc: HashSet<Dot>, // Dot cloud. Doesn't grow much, thus it's ok to be a hashset and iterate over.
 }
 
 impl DotContext {
@@ -21,19 +21,7 @@ impl DotContext {
         }
     }
 
-    // STANDARD FUNCTIONS =======================================
 
-    /// Inserts an element in dc.
-    /// If there is no entry for the id, it creates it.
-    pub fn add_dc(&mut self, dot: &Dot, compact: Option<bool>) {
-        self.dc.insert(dot.clone());
-
-        match compact {
-            Some(true) => self.compact(),
-            Some(false) => return,
-            None => self.compact(),
-        }
-    }
     /// Creates a new dot considering that the dots are compacted.
     /// Gets the corresponsing n in self.cc and increment it.
     pub fn makedot(&mut self, id: &NodeId, sck: i64) -> Dot {
@@ -93,7 +81,6 @@ impl DotContext {
         }
     }
 
-    // UTILS    =====================================================
 
     /// Verifies if the received argument was already seen.
     pub fn dot_in(&self, d: &Dot) -> bool {

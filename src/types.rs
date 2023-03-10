@@ -21,6 +21,12 @@ pub struct TagElement<E: Eq + Clone + Hash + Debug + Display> {
     pub elem: E,
 }
 
+impl<E: Eq + Clone + Hash + Debug + Display> TagElement<E>{
+    pub fn new(sck: i64, n: i64, elem: E) -> Self{
+        Self { sck, n, elem }
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Dot {
     pub id: NodeId,
@@ -28,6 +34,11 @@ pub struct Dot {
     pub n: i64,
 }
 
+impl Dot {
+    pub fn new(id: NodeId, sck: i64, n: i64) -> Self {
+        Self { id, sck, n }
+    }
+}
 impl Display for Ck {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.sck, self.dck)
