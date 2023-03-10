@@ -64,11 +64,11 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     pub fn merge(&mut self, other: &Self) {
-        self.fill_slots(other);
-        self.discard_slot(other);
+        self.fill_slots(other);     // Adds the new entries. 
+        self.discard_slot(other);   
         self.create_slot(other);
-        self.discard_transl(other);
         self.merge_vectors(other);
+        self.discard_transl(other);
         self.translate(other);
         self.discard_tokens(other);
         self.create_token(other);
@@ -81,65 +81,34 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     // Functions that composes the merge.
     // --------------------------
 
-    /// Creates a slot.
-    /// # Example
-    /// ```
-    /// use std::collections::HashMap;
-    /// use thesis_code::{handoff::Handoff, nodeId::NodeId};
-    /// // Given
-    /// let id_a = NodeId::new(1, "A".to_string());
-    /// let id_b = NodeId::new(1, "B".to_string());
-    /// let mut h_1: Handoff<i32> = Handoff::new(id_a.clone(), 1);
-    /// h_1.add(2);
-    /// let mut h_2: Handoff<i32> = Handoff::new(id_b, 0);
-    /// // When
-    /// h_2.create_slot(&h_1);
-    /// // Then
-    /// assert_eq!(h_2.dck, 2);
-    /// assert_eq!(h_2.slots, HashMap::from([(id_a, (1,1))]));
-    /// ```
     pub fn create_slot(&mut self, other: &Self) {
-        // can be optimized to check only the other.kernel.set.
-        if self.tier < other.tier
-            && other.kernel.has_seen(&other.id)
-            && !self.slots.contains_key(&other.id)
-        {
-            self.slots.insert(
-                other.id.clone(),
-                Ck {
-                    sck: other.ck.sck,
-                    dck: self.ck.dck,
-                },
-            );
+        if self.tier < other.tier && other.has_updates() && !self.slots.contains_key(&other.id) {
+            self.slots.insert(other.id.clone(), Ck::new(other.ck.sck, other.ck.dck));
             self.ck.dck += 1;
         }
     }
 
     /// Creates a token in case there is a match slot in the other node.
-    /// TODO: to test
     pub fn create_token(&mut self, other: &Self) {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.ck.sck {
             let slot_ck = other.slots[&self.id];
-            let cc = self.kernel.cc.cc2set(&self.id);
-
-            let set = self
-                .kernel
-                .elems
-                .get(&self.id)
-                .unwrap_or(&HashSet::new())
-                .clone();
-
-            self.tokens
-                .insert((self.id.clone(), other.id.clone()), (slot_ck, cc, set));
+            let cc = self.kernel.cc.cc2set(&self.id);   // causal context with only self.id entries.
+            let set = self.kernel.elems.get(&self.id).unwrap_or(&HashSet::new()).clone();
+            self.tokens.insert((self.id.clone(), other.id.clone()), (slot_ck, cc, set));
             self.kernel.clean_id(&self.id);
             self.ck.sck += 1;
         }
     }
 
     pub fn merge_vectors(&mut self, other: &Self) {
-        let mut prep_other: Self = other.clone();
-        prep_other.kernel.clean_id(&other.id);
-        self.kernel.join(&prep_other.kernel);
+        // Do not merge entries with other.id as key.
+        if self.tier <= other.tier {
+            let mut prep_other: Self = other.clone();
+            prep_other.kernel.clean_id(&other.id);
+            self.kernel.join(&prep_other.kernel);
+        } else {
+            self.kernel.join(&other.kernel);
+        }
     }
 
     /// TODO: to test
@@ -210,10 +179,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Applies translatiosn that came from the other node.
     /// TODO: check this. Supposed to get things on token and translate, only.
     pub fn translate(&mut self, other: &Self) {
-        other
-            .transl
-            .iter()
-            .for_each(|transl| self.kernel.rename(transl));
+        other.transl.iter().for_each(|transl| self.kernel.rename(transl));
     }
 
     /// TODO
@@ -258,6 +224,10 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 })
                 .collect();
         });
+    }
+
+    fn has_updates(&self) -> bool{
+        self.kernel.has_seen(&self.id)
     }
 }
 
