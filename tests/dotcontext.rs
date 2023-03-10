@@ -1,144 +1,394 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
-use thesis_code::dotcontext::DotContext;
+use thesis_code::{dotcontext::DotContext, nodeId::NodeId, types::Dot};
 
-// Add once to a dot
-#[test]
-pub fn makedot_1(){
-    // Given
-    let mut dotctx: DotContext<String> = DotContext::new();
-    // When 
-    let dot = dotctx.makedot(&"A".to_string(), 1);
-    // Then 
-    let res_dot = ("A".to_string(), 1, 1); 
-    let res_dotctx = "DotContext { cc: {\"A\": {1: 1}}, dc: {} }";
-    let format_dotctx = format!("{:?}", dotctx);
-    assert_eq!(dot, res_dot);
-    assert_eq!(format_dotctx, res_dotctx);
+/// Creates a NodeId.
+pub fn id(id: &str) -> NodeId {
+    return NodeId::new(1, id.to_string());
 }
 
-// Add twice to a dot
-#[test]
-pub fn makedot_2(){
-    // Given
-    let mut dotctx: DotContext<String> = DotContext::new();
-    dotctx.makedot(&"A".to_string(), 1);
-
-    // When 
-    let dot_2 = dotctx.makedot(&"A".to_string(), 1);
-
-    // Then 
-    let res_dot = ("A".to_string(), 1, 2); 
-    let res_dotctx = "DotContext { cc: {\"A\": {1: 2}}, dc: {} }";
-    let format_dotctx = format!("{:?}", dotctx);
-    assert_eq!(dot_2, res_dot);
-    assert_eq!(format_dotctx, res_dotctx);
+pub fn dotcontext_add_cc_vals(dotcontext: &mut DotContext, arr: &[(&str, i64, i64)]) {
+    for &(id_, sck, n) in arr.iter() {
+        dotcontext
+            .cc
+            .entry(id(id_))
+            .and_modify(|val| {
+                val.insert(sck, n);
+            })
+            .or_insert(HashMap::from([(sck, n)]));
+    }
 }
 
-// Add twice to a dot, but the third is to another source clock
-#[test]
-pub fn makedot_3(){
-    // Given
-    let mut dotctx: DotContext<String> = DotContext::new();
-    dotctx.makedot(&"A".to_string(), 1);
-    dotctx.makedot(&"A".to_string(), 1);
-
-    // When 
-    let dot_3 = dotctx.makedot(&"A".to_string(), 3);
-
-    // Then 
-    let res_dot = ("A".to_string(), 3, 1); // (E,sck,n)
-    assert_eq!(dot_3, res_dot);
-    assert_eq!(*dotctx.cc.get(&"A".to_string()).unwrap().get(&3).unwrap(), 1);
-    assert_eq!(*dotctx.cc.get(&"A".to_string()).unwrap().get(&1).unwrap(), 2);
+pub fn dotcontext_add_dots(dotcontext: &mut DotContext, arr: &[(&str, i64, i64)]) {
+    for &(id_, sck, n) in arr.iter() {
+        dotcontext
+            .dc
+            .entry(id(id_))
+            .and_modify(|val| {
+                val.insert((sck, n));
+            })
+            .or_insert(HashSet::from([(sck, n)]));
+    }
 }
 
-/// Insert just one dot
-#[test]
-pub fn insert_dot_1(){
-    // Given
-    let mut dotctx: DotContext<String> = DotContext::new();
-    // When 
-    dotctx.insert_dot(&"A".to_string(), 1, 2, Some(false));
-    // Then 
-    assert_eq!(dotctx.dc[&"A".to_string()], HashSet::from([(1,2)]));
+pub fn get_dotcontext_1() -> DotContext {
+    let mut dotcontext = DotContext::new();
+    dotcontext_add_cc_vals(&mut dotcontext, &[("A", 2, 3), ("B", 4, 5), ("A", 3, 4)]);
+    dotcontext
 }
 
-/// Insert two dots
-#[test]
-pub fn insert_dot_2(){
-    // Given
-    let mut dotctx: DotContext<String> = DotContext::new();
-    dotctx.insert_dot(&"A".to_string(), 1, 4, Some(false));
-    // When 
-    dotctx.insert_dot(&"A".to_string(), 1, 2, Some(false));
-    // Then 
-    assert_eq!(dotctx.dc[&"A".to_string()], HashSet::from([(1,2), (1,4)]));
-
+// Contains dc
+pub fn get_dotcontext_2() -> DotContext {
+    let mut dotcontext = DotContext::new();
+    dotcontext_add_cc_vals(&mut dotcontext, &[("A", 2, 3), ("B", 4, 5), ("A", 3, 4)]);
+    dotcontext_add_dots(&mut dotcontext, &[("A", 2, 5), ("A", 2, 7), ("B", 4, 7)]);
+    dotcontext
 }
 
-/// Dotcontexts with empty intersection.
+// Contains dc
+pub fn get_dotcontext_3() -> DotContext {
+    let mut dotcontext = DotContext::new();
+    dotcontext_add_cc_vals(&mut dotcontext, &[("A", 2, 8), ("B", 4, 5), ("A", 3, 4)]);
+    dotcontext_add_dots(&mut dotcontext, &[("A", 2, 7), ("B", 4, 9), ("C", 2, 4)]);
+    dotcontext
+}
+
+#[test]
+pub fn get_cc_1() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.cc2set(&id("A"));
+    let res = HashSet::from([
+        Dot {
+            id: id("A"),
+            sck: 3,
+            n: 4,
+        },
+        Dot {
+            id: id("A"),
+            sck: 2,
+            n: 3,
+        },
+    ]);
+    assert_eq!(res, curr);
+}
+
+#[test]
+pub fn get_cc_2() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.cc2set(&id("B"));
+    let res = HashSet::from([Dot {
+        id: id("B"),
+        sck: 4,
+        n: 5,
+    }]);
+    assert_eq!(res, curr);
+}
+
+#[test]
+pub fn rm_cc_1() {
+    let mut dc2 = get_dotcontext_2();
+    dc2.rm_cc(&Dot {
+        id: id("A"),
+        sck: 2,
+        n: 3,
+    });
+    let res = HashMap::from([
+        (id("A"), HashMap::from([(3, 4)])),
+        (id("B"), HashMap::from([(4, 5)])),
+    ]);
+    assert_eq!(res, dc2.cc);
+}
+
+#[test]
+pub fn rm_cc_2() {
+    let mut dc2 = get_dotcontext_2();
+    dc2.rm_cc(&Dot {
+        id: id("B"),
+        sck: 4,
+        n: 5,
+    });
+
+    let res = HashMap::from([(id("A"), HashMap::from([(2, 3), (3, 4)]))]);
+
+    assert_eq!(res, dc2.cc);
+}
+
+#[test]
+pub fn union_dc_1() {
+    let dc2 = get_dotcontext_2();
+    let mut dc3 = get_dotcontext_3();
+
+    let mut dc2_union = dc2.clone();
+    dc2_union.union_dc(&dc3.dc);
+    dc3.union_dc(&dc2.dc);
+
+    let res = HashMap::from([
+        (id("A"), HashSet::from([(2, 7), (2, 5)])),
+        (id("B"), HashSet::from([(4, 7), (4, 9)])),
+        (id("C"), HashSet::from([(2, 4)])),
+    ]);
+
+    assert_eq!(res, dc2_union.dc);
+    assert_eq!(res, dc3.dc);
+}
+
+/// Removes an existent id.
+#[test]
+pub fn clean_id_1() {
+    let mut dc2 = get_dotcontext_2();
+    dc2.rm_id(&id("A"));
+
+    let mut res = DotContext::new();
+    dotcontext_add_cc_vals(&mut res, &[("B", 4, 5)]);
+    dotcontext_add_dots(&mut res, &[("B", 4, 7)]);
+
+    assert_eq!(res, dc2);
+}
+
+/// Removes an inexistent id.
+#[test]
+pub fn clean_id_2() {
+    let mut dc2 = get_dotcontext_2();
+    dc2.rm_id(&id("C"));
+
+    let res = get_dotcontext_2();
+
+    assert_eq!(res, dc2);
+}
+
+#[test]
+pub fn has_seen_1() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.id_in(&id("A"));
+    assert!(curr);
+}
+
+#[test]
+pub fn has_seen_2() {
+    let dc2 = get_dotcontext_2();
+    let curr = dc2.id_in(&id("A"));
+    assert!(curr);
+}
+
+#[test]
+pub fn has_seen_3() {
+    let dc3 = get_dotcontext_3();
+    let curr = dc3.id_in(&id("A"));
+    assert!(curr);
+}
+
+#[test]
+pub fn has_seen_4() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.id_in(&id("D"));
+    assert!(!curr);
+}
+
+#[test]
+pub fn has_seen_5() {
+    let dc2 = get_dotcontext_2();
+    let curr = dc2.id_in(&id("D"));
+    assert!(!curr);
+}
+
+#[test]
+pub fn dot_in_1() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.dot_in(&Dot {
+        id: id("A"),
+        sck: 2,
+        n: 3,
+    });
+    assert!(curr);
+}
+
+#[test]
+pub fn dot_in_2() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.dot_in(&Dot {
+        id: id("A"),
+        sck: 2,
+        n: 4,
+    });
+    assert!(!curr);
+}
+
+#[test]
+pub fn dot_in_3() {
+    let dc1 = get_dotcontext_1();
+    let curr = dc1.dot_in(&Dot {
+        id: id("A"),
+        sck: 2,
+        n: 2,
+    });
+    assert!(curr);
+}
+
+#[test]
+pub fn dot_in_4() {
+    let dc2 = get_dotcontext_2();
+    let curr = dc2.dot_in(&Dot {
+        id: id("A"),
+        sck: 2,
+        n: 5,
+    });
+    assert!(curr);
+}
+
+#[test]
+pub fn rename_cc_1() {
+    let mut dc1 = get_dotcontext_1();
+    let transl = (
+        Dot {
+            id: id("A"),
+            sck: 2,
+            n: 3,
+        },
+        Dot {
+            id: id("C"),
+            sck: 2,
+            n: 4,
+        },
+    );
+    dc1.rename_cc(transl);
+
+    let res = HashMap::from([
+        (id("A"), HashMap::from([(3, 4)])),
+        (id("B"), HashMap::from([(4, 5)])),
+        (id("C"), HashMap::from([(2, 4)])),
+    ]);
+
+    assert_eq!(res, dc1.cc);
+}
+
+#[test]
+pub fn rename_cc_2() {
+    let mut dc1 = get_dotcontext_1();
+    let transl = (
+        Dot {
+            id: id("A"),
+            sck: 2,
+            n: 8,
+        },
+        Dot {
+            id: id("C"),
+            sck: 2,
+            n: 4,
+        },
+    );
+    dc1.rename_cc(transl);
+
+    let res = HashMap::from([
+        (id("A"), HashMap::from([(3, 4), (2, 3)])),
+        (id("B"), HashMap::from([(4, 5)])),
+    ]);
+
+    assert_eq!(res, dc1.cc);
+}
+
+#[test]
+pub fn rename_dc_1() {
+    let mut dc2 = get_dotcontext_2();
+    let transl = (
+        Dot {
+            id: id("A"),
+            sck: 2,
+            n: 5,
+        },
+        Dot {
+            id: id("C"),
+            sck: 2,
+            n: 4,
+        },
+    );
+    dc2.rename_dc(transl);
+
+    let res = HashMap::from([
+        (id("A"), HashSet::from([(2, 7)])),
+        (id("B"), HashSet::from([(4, 7)])),
+        (id("C"), HashSet::from([(2, 4)])),
+    ]);
+
+    assert_eq!(res, dc2.dc);
+}
+
+#[test]
+pub fn rename_dc_2() {
+    let mut dc2 = get_dotcontext_2();
+    let transl = (
+        Dot {
+            id: id("A"),
+            sck: 2,
+            n: 8,
+        },
+        Dot {
+            id: id("C"),
+            sck: 2,
+            n: 4,
+        },
+    );
+    dc2.rename_dc(transl);
+
+    let res = HashMap::from([
+        (id("A"), HashSet::from([(2, 7), (2, 5)])),
+        (id("B"), HashSet::from([(4, 7)])),
+    ]);
+
+    assert_eq!(res, dc2.dc);
+}
+
+/// Id entry exists
+#[test]
+pub fn makedot_1() {
+    let mut dc1 = get_dotcontext_1();
+    let dot = dc1.makedot(&id("A"), 3);
+    assert_eq!(
+        Dot {
+            id: id("A"),
+            sck: 3,
+            n: 5
+        },
+        dot
+    );
+}
+
+/// Id entry does not exists
+#[test]
+pub fn makedot_2() {
+    let mut dc1 = get_dotcontext_1();
+    let dot = dc1.makedot(&id("B"), 2);
+    assert_eq!(
+        Dot {
+            id: id("B"),
+            sck: 2,
+            n: 1
+        },
+        dot
+    );
+}
+
 #[test]
 pub fn join_1(){
-    // Given 
-    let mut dc_1: DotContext<String> = DotContext::new(); 
-    dc_1.cc = HashMap::from([("A".to_string(), HashMap::from([(1,3)]))]);
-    dc_1.dc = HashMap::from([("A".to_string(), HashSet::from([(1,2), (3,4)])), 
-        ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
+    let mut dc2 = get_dotcontext_2();
+    let dc2_clone = get_dotcontext_2();
+    let mut dc3 = get_dotcontext_3(); 
 
-    let mut dc_2: DotContext<String> = DotContext::new(); 
-    dc_2.cc = HashMap::from([("C".to_string(), HashMap::from([(1,3)]))]);
-    dc_2.dc = HashMap::from([("D".to_string(), HashSet::from([(1,2), (3,4)])), 
-        ("E".to_string(), HashSet::from([(2,4), (3,5)]))]);
+    dc2.join(&dc3);
+    dc3.join(&dc2_clone);
 
-    // When 
-    dc_1.join(&dc_2);
+    let res_dc = HashMap::from([
+        (id("B"), HashSet::from([(4, 7), (4,9)])),
+        (id("C"), HashSet::from([(2, 4)])),
+    ]);
 
-    // Then 
-    let res_cc = HashMap::from([("A".to_string(), HashMap::from([(1,3)])), ("C".to_string(), HashMap::from([(1,3)]))]);
-    let res_dc = HashMap::from([("D".to_string(), HashSet::from([(1,2), (3,4)])), ("E".to_string(), HashSet::from([(2,4), (3,5)])), ("A".to_string(), HashSet::from([(3,4)])), ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
-    assert_eq!(dc_1.cc, res_cc);
-    assert_eq!(dc_1.dc, res_dc);
+    let res_cc = HashMap::from([
+        (id("B"), HashMap::from([(4,5)])),
+        (id("A"), HashMap::from([(3,4),(2,8)]))
+    ]);
+
+    assert_eq!(dc2.cc, res_cc);
+    assert_eq!(dc3.cc, res_cc);
+    assert_eq!(dc2.dc, res_dc);
+    assert_eq!(dc3.dc, res_dc);
 }
 
-/// DotContexts with elements in common 
-#[test]
-pub fn join_2() {
-    // Given 
-    let mut dc_1: DotContext<String> = DotContext::new(); 
-    dc_1.cc = HashMap::from([("A".to_string(), HashMap::from([(1,3)]))]);
-    dc_1.dc = HashMap::from([("A".to_string(), HashSet::from([(1,2), (3,4)])), 
-        ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
-
-    let mut dc_2: DotContext<String> = DotContext::new(); 
-    dc_2.cc = HashMap::from([("C".to_string(), HashMap::from([(1,3)]))]);
-    dc_2.dc = HashMap::from([("A".to_string(), HashSet::from([(2,1), (3,4)])), 
-        ("E".to_string(), HashSet::from([(2,4), (3,5)]))]);
-
-    // When 
-    dc_1.join(&dc_2);
-
-    // Then 
-    let res_cc = HashMap::from([("A".to_string(), HashMap::from([(2,1),(1,3)])), ("C".to_string(), HashMap::from([(1,3)]))]);
-    let res_dc = HashMap::from([("E".to_string(), HashSet::from([(2,4), (3,5)])), ("A".to_string(), HashSet::from([(3,4)])), ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
-    assert_eq!(dc_1.cc, res_cc);
-    assert_eq!(dc_1.dc, res_dc);
-}
-
-/// Compact and add new element to cc.
-#[test]
-pub fn compact_1(){
-    let mut dc_1: DotContext<String> = DotContext::new(); 
-    dc_1.cc = HashMap::from([("A".to_string(), HashMap::from([(1,3)]))]);
-    dc_1.dc = HashMap::from([("A".to_string(), HashSet::from([(2,1), (3,4)])), 
-        ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
-
-    // When 
-    dc_1.compact();
-
-    // Then 
-    let res_cc = HashMap::from([("A".to_string(), HashMap::from([(2,1),(1,3)]))]);
-    let res_dc = HashMap::from([("A".to_string(), HashSet::from([(3,4)])), ("B".to_string(), HashSet::from([(2,4), (3,5)]))]);
-    assert_eq!(dc_1.cc, res_cc);
-    assert_eq!(dc_1.dc, res_dc);
-}
