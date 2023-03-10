@@ -58,9 +58,9 @@ impl DotContext {
 
     /// Joins two dot contexts.
     pub fn join(&mut self, other: &Self) {
-        for (key, &n) in other.cc.iter() {
+        for ((id, sck), &n) in other.cc.iter() {
             self.cc
-                .entry(key.clone())
+                .entry((id.clone(), *sck).clone())
                 .and_modify(|self_n| *self_n = max(*self_n, n))
                 .or_insert(n);
         }

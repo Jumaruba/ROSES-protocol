@@ -10,7 +10,7 @@ use crate::types::{Ck, Dot, TagElement};
 pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     id: NodeId,
     kernel: Kernel<E>,
-    val: Kernel<E>,
+    pub val: Kernel<E>,
     pub ck: Ck,
     pub slots: HashMap<NodeId, Ck>,
     tokens: HashMap<(NodeId, NodeId), (Ck, HashMap<(NodeId, i64), i64>, HashSet<TagElement<E>>)>,
@@ -65,7 +65,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.create_slot(other);
         self.merge_vectors(other);
         self.discard_transl(other);
-        self.translate(other);
+        //self.translate(other);
         self.discard_tokens(other);
         self.create_token(other);
 
@@ -104,9 +104,11 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn merge_vectors(&mut self, other: &Self) {
         // Do not merge entries with other.id as key.
         if self.tier <= other.tier {
-            self.kernel.join(&other.val);
+            self.val.join(&other.val);
+            self.kernel.join(&other.kernel.filter(&self.id));
         } else {
-            self.kernel.join(&other.kernel);
+            self.val.join(&other.val);
+            self.val.join(&other.kernel);
         }
     }
 
@@ -167,11 +169,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             .collect();
     }
 
-    /// Updates the values in set and cc.
-    pub fn aggregate(&mut self, other: &Self) {
-        self.kernel.join(&other.kernel);
-    }
-
     /// Applies translatiosn that came from the other node.
     /// TODO: check this. Supposed to get things on token and translate, only.
     pub fn translate(&mut self, other: &Self) {
@@ -227,8 +224,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Display for Handoff<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}, ck: {:?}\ntier: {:?}\nelems: {:?}\ncc: {:?}\ndc: {:?}\nslots: {:?}\ntokens: {:?}\ntransl: {:?}\n",
-            self.id, self.ck, self.tier, self.kernel.elems, self.kernel.cc.cc, self.kernel.cc.dc, self.slots, self.tokens, self.transl
+            "id: {}, ck: {:?}\ntier: {:?}\nkernel_elems: {:?}; kernel_cc: {:?}; kernel_dc: {:?}\nval_elems: {:?}; val_cc: {:?}\nval_dc: {:?}\nslots: {:?}\ntokens: {:?}\ntransl: {:?}\n",
+            self.id, self.ck, self.tier, self.kernel.elems, self.kernel.cc.cc, self.kernel.cc.dc, self.val.elems, self.val.cc.cc, self.val.cc.dc, self.slots, self.tokens, self.transl
         )
     }
 }

@@ -85,6 +85,7 @@ where
     }
 
     pub fn join(&mut self, other: &Self) {
+
         // Intersections and elements not known by other.
         let elems = self
             .elems
@@ -106,12 +107,19 @@ where
         self.cc.join(&other.cc);
     }
 
+    pub fn filter(&self, id: &NodeId) -> Self{
+        let mut res = self.clone();
+        res.elems = res.elems.drain().filter(|entry| {entry.id == *id}).collect();
+        res.cc.cc = res.cc.cc.drain().filter(|((node_id,_), _)| {node_id == id}).collect();
+        res.cc.dc = res.cc.dc.drain().filter(|dot| {dot.id == *id}).collect();
+        res
+    }
     // --------------------------
     // UTILS
     // --------------------------
 
     /// Returns true if the node has ever received information about it, and false otherwise.
     pub fn has_update(&self) -> bool {
-        self.cc.is_empty()
+        !self.cc.is_empty()
     }
 }
