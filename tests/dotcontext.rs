@@ -21,13 +21,7 @@ pub fn dotcontext_add_cc_vals(dotcontext: &mut DotContext, arr: &[(&str, i64, i6
 
 pub fn dotcontext_add_dots(dotcontext: &mut DotContext, arr: &[(&str, i64, i64)]) {
     for &(id_, sck, n) in arr.iter() {
-        dotcontext
-            .dc
-            .entry(id(id_))
-            .and_modify(|val| {
-                val.insert((sck, n));
-            })
-            .or_insert(HashSet::from([(sck, n)]));
+        dotcontext.dc.insert(Dot::new(id_, sck, n));
     }
 }
 
@@ -119,8 +113,8 @@ pub fn union_dc_1() {
     let mut dc3 = get_dotcontext_3();
 
     let mut dc2_union = dc2.clone();
-    dc2_union.union_dc(&dc3.dc);
-    dc3.union_dc(&dc2.dc);
+    dc2_union.dc.extend(&dc3.dc);
+    dc3.dc.extend(&dc2.dc);
 
     let res = HashMap::from([
         (id("A"), HashSet::from([(2, 7), (2, 5)])),

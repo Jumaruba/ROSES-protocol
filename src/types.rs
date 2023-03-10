@@ -16,6 +16,7 @@ impl Ck {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TagElement<E: Eq + Clone + Hash + Debug + Display> {
+    pub id: NodeId,
     pub sck: i64,
     pub n: i64,
     pub elem: E,
@@ -26,6 +27,12 @@ pub struct Dot {
     pub id: NodeId,
     pub sck: i64,
     pub n: i64,
+}
+
+impl Dot {
+    pub fn new(id: NodeId, sck: i64, n: i64) -> Self {
+        Self { id, sck, n }
+    }
 }
 
 impl Display for Ck {
