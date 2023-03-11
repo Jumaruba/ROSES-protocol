@@ -57,7 +57,7 @@ pub fn apply_handoff_oper(handoff_t0: &mut Handoff<i32>, handoff_t1: &mut Handof
             handoff_t1.rm(elem);
         }
         ADD(elem) => {
-            handoff_t1.add(elem);
+            handoff_t1.add_elem(elem);
         }
     }
     handoff_t0.merge(handoff_t1);           // Create slot

@@ -25,12 +25,9 @@ impl DotContext {
         self.cc.get(&(id.clone(), sck)).unwrap_or(&0).clone()
     }
 
-    pub fn inc_cc(&mut self, id: &NodeId, sck: i64, n: i64) -> Dot {
+    pub fn insert_cc(&mut self, dot: &Dot){
         let v = self.cc
-            .entry((id.clone(), sck))
-            .and_modify(|v| *v = *v + n)
-            .or_insert(n);
-        Dot::new(id.clone(), sck, v.clone())
+            .insert((dot.id.clone(), dot.sck), dot.n);
     }
 
     /// Adds a dot to the struct.
