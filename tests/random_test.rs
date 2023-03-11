@@ -1,6 +1,6 @@
 // Tests the structure against a common aworset.
 use crate::Op::{ADD, RM};
-use crdt_sample::{aworset_opt, AworsetOpt};
+use crdt_sample::{AworsetOpt};
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::HashSet;
@@ -67,19 +67,19 @@ pub fn apply_handoff_oper(
     }
     handoff_t0.merge(handoff_t1); // Create slot
     if debug {
-        println!("CREATE SLOT, t0:: {:?}", handoff_t0);
+        dbg!("CREATE SLOT, t0:: {}", &handoff_t0);
     }
     handoff_t1.merge(handoff_t0); // Create token
     if debug {
-        println!("CREATE TOKEN, t1:: {:?}", handoff_t1);
+        dbg!("CREATE TOKEN, t1:: {}", &handoff_t1);
     }
     handoff_t0.merge(handoff_t1); // Fill slot
     if debug {
-        println!("CREATE FILL SLOT, t0:: {:?}", handoff_t0);
+        dbg!("CREATE FILL SLOT, t0:: {}", &handoff_t0);
     }
     handoff_t1.merge(handoff_t0); // Discard token
     if debug {
-        println!("DISCARD TOKEN, t1:: {:?}", handoff_t1);
+        dbg!("DISCARD TOKEN, t1:: {}", &handoff_t1);
     }
 }
 
@@ -90,16 +90,16 @@ pub fn test(min: i32, max: i32, n_oper: i32, debug: bool) -> (HashSet<i32>, Hash
         AworsetOpt::new(crdt_sample::NodeId::new(1, "C".to_string()));
     let opers: Vec<Op<i32>> = gen_rnd_opers(min, max, n_oper);
     if debug == true {
-        println!("OPER: {:?}", opers);
+        dbg!("OPER: {}", &opers);
     }
     for oper in opers.iter() {
         apply_aworset_oper(&mut aworset_opt, oper.clone());
         apply_handoff_oper(&mut handoff_t0, &mut handoff_t1, oper.clone(), debug);
         if debug == true {
-            println!(">> APPLY {:?}=======================", oper);
-            println!("> T0:: {:?}\n", handoff_t0);
-            println!("> T1:: {:?}\n", handoff_t1);
-            println!("> AWORSET{:?}\n", aworset_opt);
+            dbg!(">> APPLY {}=======================", &oper);
+            dbg!("> T0:: {}\n", &handoff_t0);
+            dbg!("> T1:: {}\n", &handoff_t1);
+            dbg!("> AWORSET{}\n", &aworset_opt);
         }
     }
 
