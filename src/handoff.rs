@@ -111,8 +111,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.merge_vectors(other);
         self.discard_tokens(other);
         self.create_token(other);
-
-        //self.cache_tokens(other);
+        self.cache_tokens(other);
     }
 
     pub fn create_slot(&mut self, other: &Self) {
@@ -268,8 +267,20 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// TODO
-    pub fn cache_tokens(&mut self, _other: &Self) {
-        todo!()
+    pub fn cache_tokens(&mut self, other: &Self) {
+        if self.tier < other.tier {
+            for ((src, dst), (ck, n, set)) in other.tokens.iter() {
+                if *src == other.id && *dst != self.id {
+                    let keys = &(src.clone(), dst.clone());
+                    let val = if self.tokens.contains_key(keys) && ck.sck >= self.tokens[keys].0.sck {
+                        (ck.clone(), n.clone(), set.clone())
+                    } else {
+                        self.tokens[keys].clone()
+                    };
+                    self.tokens.insert(keys.clone(), val);
+                }
+            }
+        }
     }
 
     /// Translation is discarded when the element was already translated.
