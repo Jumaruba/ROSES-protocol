@@ -4,7 +4,7 @@ use std::hash::Hash;
 
 use crate::kernel::Kernel;
 use crate::nodeId::NodeId;
-use crate::types::{Ck, Dot, TagElement};
+use crate::types::{Ck, Dot, TagItem};
 
 #[derive(Debug, Clone)]
 pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
@@ -12,8 +12,8 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     kernel: Kernel<E>,
     pub ck: Ck,
     pub slots: HashMap<NodeId, Ck>,
-    tokens: HashMap<(NodeId, NodeId), (Ck, i64, HashSet<TagElement<E>>)>,
-    pub transl: HashSet<(Dot, Dot, i64)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)  // TODO: create a type for this.
+    tokens: HashMap<(NodeId, NodeId), (Ck, i64, HashSet<TagItem<E>>)>,
+    pub transl: HashSet<(Dot, Dot)>, // (id_src, sck_src_clock, counter_src, id_dst, sck_dst_clock_ counter_dst)  // TODO: create a type for this.
     tier: i32,
 }
 
@@ -30,14 +30,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }
     }
 
-    // --------------------------
-    // OPERATIONS
-    // Core operations of the Handoff
-    // --------------------------
-
-    /// Returns all the elements known by the node.
-    /// Must be the combination of the elements in the token and set.
-    /// TODO: to test
     pub fn fetch(&self) -> HashSet<E> {
         let mut kernel_elems = self.kernel.elements();
         kernel_elems.extend(self.get_token_elements());
@@ -45,13 +37,11 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// Adds an element to the node.
-    /// TODO: to test
-    pub fn add(&mut self, elem: E) -> TagElement<E> {
+    pub fn add(&mut self, elem: E) -> TagItem<E> {
         self.kernel.add(elem, self.ck.sck)
     }
 
     /// Removes an element
-    /// TODO: To test
     pub fn rm(&mut self, elem: E) {
         self.rm_token_elem(&elem);
         self.kernel.rm(&elem);
@@ -70,11 +60,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         //self.cache_tokens(other);
     }
 
-    // --------------------------
-    // MERGE FUNCTIONS
-    // Functions that composes the merge.
-    // --------------------------
-
     pub fn create_slot(&mut self, other: &Self) {
         if self.tier < other.tier && other.has_updates() && !self.slots.contains_key(&other.id) {
             self.slots
@@ -87,19 +72,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn create_token(&mut self, other: &Self) {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.ck.sck {
             let slot_ck = other.slots[&self.id];
-            let n = self
-                .kernel
-                .cc
-                .cc
-                .get(&(self.id.clone(), self.ck.sck))
-                .unwrap_or(&0)
-                .clone();
-            let set = self
-                .kernel
-                .elems
-                .get(&self.id)
-                .unwrap_or(&HashSet::new())
-                .clone();
+            let n = self.kernel.cc.get_cc(&self.id, self.ck.sck);
+            let set = self.kernel.get_ti(&self.id);
             self.tokens
                 .insert((self.id.clone(), other.id.clone()), (slot_ck, n, set));
             self.kernel.clean_id(&self.id, self.ck.sck);
@@ -120,32 +94,25 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     /// TODO: to test
     pub fn fill_slots(&mut self, other: &Self) {
-        for ((src, dst), (ck, n, elems)) in other.tokens.iter() {
-            if *dst == self.id && self.slots.contains_key(&other.id) && self.slots[&other.id] == *ck {
-                let tn = self.kernel.cc.cc.get(&(self.id.clone(), self.ck.sck)).unwrap_or(&0).clone();
-                self.add_tokens(elems);
-                self.create_translation(src, ck, tn, *n);
+        for ((_, dst), (ck, n, elems)) in other.tokens.iter() {
+            if *dst == self.id
+                && self.slots.contains_key(&other.id)
+                && self.slots[&other.id].sck == ck.sck
+            {
+                self.insert_dot_elem(elems);
+                let target_dot = self.kernel.cc.inc_cc(&self.id, self.ck.sck, *n);
+                let source_dot = Dot::new(self.id.clone(), ck.sck, *n);
+                self.transl.insert((source_dot, target_dot));
                 self.slots.remove(&other.id);
             }
         }
     }
 
-    pub fn create_translation(&mut self, src: &NodeId, ck: &Ck, tn: i64, n: i64){
-        let to = Dot::new(src.clone(), ck.sck, n);
-        let td = Dot::new(
-            self.id.clone(),
-            self.ck.sck,
-            self.kernel.cc.cc[&(self.id.clone(), self.ck.sck)],
-        );
 
-        self.transl.insert((to, td, tn));
-    }
-
-    /// Merges the tokens elements with the actual state.
-    /// A correct kernel contains only elements created in the source node.
-    fn add_tokens(&mut self, elems: &HashSet<TagElement<E>>) {
-        elems.iter().for_each(|o_tag_element| {
-            self.kernel.add(o_tag_element.elem.clone(), self.ck.sck);
+    fn insert_dot_elem(&mut self, elems: &HashSet<TagItem<E>>) {
+        elems.iter().for_each(|tag_e| {
+            self.kernel
+                .insert_dot_elem(tag_e.to_dot(&self.id), &tag_e.elem)
         });
     }
 
@@ -179,16 +146,16 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn translate(&mut self, other: &Self) {
         let mut res: Handoff<E> = Handoff::new(other.id.clone(), other.tier);
         // translate tokens
-        for (orig, transl, start_n) in other.transl.iter() {
+        for (orig, transl) in other.transl.iter() {
             for ((src, dst), (ck, n, elems)) in self.tokens.iter() {
                 if orig.id == *src && ck.sck == orig.sck && orig.n == *n {
-                    res.kernel.insert_cc(transl);
+                    res.kernel.add_cc(transl);
                 }
                 elems.iter().for_each(|tag_element| {
-                    res.kernel.elems.entry(dst.clone()).and_modify(|hash| {
-                        hash.insert(TagElement::new(
+                    res.kernel.ti.entry(dst.clone()).and_modify(|hash| {
+                        hash.insert(TagItem::new(
                             transl.sck,
-                            tag_element.n + start_n,
+                            tag_element.n,
                             tag_element.elem.clone(),
                         ));
                     });
@@ -210,7 +177,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.transl = self
             .transl
             .drain()
-            .filter(|(_, dst_dot, _)| !other.kernel.cc.dot_in(&dst_dot))
+            .filter(|(_, dst_dot)| !other.kernel.cc.dot_in(&dst_dot))
             .collect();
     }
 
@@ -247,7 +214,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Display for Handoff<E> {
         write!(
             f,
             "id: {}, ck: {:?}\ntier: {:?}\nelems: {:?}\ncc: {:?}\ndc: {:?}\nslots: {:?}\ntokens: {:?}\ntransl: {:?}\n",
-            self.id, self.ck, self.tier, self.kernel.elems, self.kernel.cc.cc, self.kernel.cc.dc, self.slots, self.tokens, self.transl
+            self.id, self.ck, self.tier, self.kernel.ti, self.kernel.cc.cc, self.kernel.cc.dc, self.slots, self.tokens, self.transl
         )
     }
 }

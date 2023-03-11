@@ -20,7 +20,28 @@ impl DotContext {
             dc: HashSet::new(),
         }
     }
+    /// Gets elements 
+    pub fn get_cc(&mut self, id: &NodeId, sck: i64) -> i64 {
+        self.cc.get(&(id.clone(), sck)).unwrap_or(&0).clone()
+    }
 
+    pub fn inc_cc(&mut self, id: &NodeId, sck: i64, n: i64) -> Dot {
+        let v = self.cc
+            .entry((id.clone(), sck))
+            .and_modify(|v| *v = *v + n)
+            .or_insert(n);
+        Dot::new(id.clone(), sck, v.clone())
+    }
+
+    /// Adds a dot to the struct.
+    pub fn insert_dot(&mut self, dot: &Dot, compact: Option<bool>) {
+        self.dc.insert(dot.clone());
+        match compact {
+            Some(true) => self.compact(),
+            Some(false) => return,
+            None => self.compact(),
+        }
+    }
 
     /// Creates a new dot considering that the dots are compacted.
     /// Gets the corresponsing n in self.cc and increment it.
@@ -30,12 +51,7 @@ impl DotContext {
             .entry((id.clone(), sck))
             .and_modify(|val| *val += 1)
             .or_insert(1);
-
-        Dot {
-            id: id.clone(),
-            sck,
-            n: n.clone(),
-        }
+        Dot::new(id.clone(), sck, n.clone())
     }
 
     /// Joins two dot contexts.
@@ -81,7 +97,6 @@ impl DotContext {
         }
     }
 
-
     /// Verifies if the received argument was already seen.
     pub fn dot_in(&self, d: &Dot) -> bool {
         if let Some(val) = self.cc.get(&(d.id.clone(), d.sck)) {
@@ -107,7 +122,7 @@ impl DotContext {
 
     /// Removes id's information from the dotcontext.
     /// Entries in self.dc and self.cc are removed.
-    pub fn rm_id(&mut self, id: &NodeId, sck: i64) {
+    pub fn clean_id(&mut self, id: &NodeId, sck: i64) {
         self.cc.remove(&(id.clone(), sck));
         self.dc = self.dc.drain().filter(|dot| dot.id != *id).collect();
     }
