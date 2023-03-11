@@ -3,11 +3,11 @@ use crate::Op::{ADD, RM};
 use crdt_sample::{AworsetOpt};
 use rand::seq::SliceRandom;
 use rand::Rng;
+use thesis_code::types::NodeId;
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use thesis_code::handoff::Handoff;
-use thesis_code::nodeId::NodeId;
 
 pub fn id(id: &str) -> NodeId {
     return NodeId::new(1, id.to_string());
@@ -29,7 +29,6 @@ pub fn get_rand_oper(min: i32, max: i32) -> Op<i32> {
 
 /// Generates a random vector of operations, which can be applied in any register based crdt.
 pub fn gen_rnd_opers(min: i32, max: i32, n_oper: i32) -> Vec<Op<i32>> {
-    let mut rng = rand::thread_rng();
     let mut operations = Vec::new();
 
     for _ in 0..n_oper {

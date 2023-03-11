@@ -2,8 +2,7 @@ use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
-use crate::nodeId::NodeId;
-use crate::types::Dot;
+use crate::types::{Dot, NodeId};
 
 /// Tries to optimize mapping.
 /// Inspired in: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
@@ -26,8 +25,7 @@ impl DotContext {
     }
 
     pub fn insert_cc(&mut self, dot: &Dot){
-        let v = self.cc
-            .insert((dot.id.clone(), dot.sck), dot.n);
+        self.cc.insert((dot.id.clone(), dot.sck), dot.n);
     }
 
     /// Adds a dot to the struct.

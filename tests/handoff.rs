@@ -1,4 +1,4 @@
-use thesis_code::{handoff::Handoff, nodeId::NodeId};
+use thesis_code::{handoff::Handoff, types::NodeId};
 
 #[test]
 pub fn rm_element(){

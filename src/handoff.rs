@@ -2,19 +2,19 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
+
 use crate::dotcontext::DotContext;
-use crate::nodeId::NodeId;
-use crate::types::{Ck, Dot, TagItem};
+use crate::types::{Ck, Dot, TagElem, NodeId};
 
 #[derive(Debug, Clone)]
 pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     pub id: NodeId,
     pub tier: i32,
-    pub ck: Ck,
+    pub ck: Ck,                                   // Clock  
     pub cc: DotContext,                           // Causal Context
-    pub ti: HashMap<NodeId, HashSet<TagItem<E>>>, // Tagged Items
+    pub te: HashMap<NodeId, HashSet<TagElem<E>>>, // Tagged Elements
     pub slots: HashMap<NodeId, Ck>,
-    pub tokens: HashMap<(NodeId, NodeId), (Ck, i64, HashSet<TagItem<E>>)>,
+    pub tokens: HashMap<(NodeId, NodeId), (Ck, i64, HashSet<TagElem<E>>)>,
     pub transl: HashSet<(Dot, Dot)>,
 }
 
@@ -25,7 +25,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             tier,
             ck: Ck { sck: 1, dck: 1 },
             cc: DotContext::new(),
-            ti: HashMap::new(),
+            te: HashMap::new(),
             slots: HashMap::new(),
             tokens: HashMap::new(),
             transl: HashSet::new(),
@@ -40,7 +40,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     fn get_ti_elems(&self) -> HashSet<E> {
         let mut res: HashSet<E> = HashSet::new();
-        for (_, set) in self.ti.iter() {
+        for (_, set) in self.te.iter() {
             set.iter().for_each(|e| {
                 res.insert(e.elem.clone());
             })
@@ -59,10 +59,10 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// Adds an element to the node.
-    pub fn add_elem(&mut self, elem: E) -> TagItem<E> {
+    pub fn add_elem(&mut self, elem: E) -> TagElem<E> {
         let dot = self.cc.makedot(&self.id, self.ck.sck);
-        let tag_elem = TagItem::new(dot.sck, dot.n, elem);
-        self.ti
+        let tag_elem = TagElem::new(dot.sck, dot.n, elem);
+        self.te
             .entry(dot.id)
             .and_modify(|set| {
                 set.insert(tag_elem.clone());
@@ -78,7 +78,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     fn rm_ti_elem(&mut self, elem: &E) {
-        self.ti.iter_mut().for_each(|(_, set)| {
+        self.te.iter_mut().for_each(|(_, set)| {
             *set = set
                 .drain()
                 .filter(|tag_elem| {
@@ -125,7 +125,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.ck.sck {
             let ck = other.slots[&self.id];
             let n = self.cc.get_cc(&self.id, self.ck.sck);
-            let set = self.ti.get(&self.id).unwrap_or(&HashSet::new()).clone();
+            let set = self.te.get(&self.id).unwrap_or(&HashSet::new()).clone();
             self.tokens
                 .insert((self.id.clone(), other.id.clone()), (ck, n, set));
             self.clear_local();
@@ -146,22 +146,22 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn join(&mut self, other: &Self) {
         // Intersection and elements not known by other.
-        self.ti.iter_mut().for_each(|(id, hash)| {
+        self.te.iter_mut().for_each(|(id, hash)| {
             *hash = hash
                 .drain()
                 .filter(|tag| {
-                    (other.ti.contains_key(id) && other.ti[id].contains(tag))
+                    (other.te.contains_key(id) && other.te[id].contains(tag))
                         || !other.cc.dot_in(&tag.to_dot(&self.id))
                 })
                 .collect();
         });
 
         // Elements known by other but not by self
-        for (id, hash) in other.ti.iter() {
+        for (id, hash) in other.te.iter() {
             for tag in hash.iter() {
                 let dot = tag.to_dot(&self.id);
                 if !self.cc.dot_in(&dot) {
-                    self.ti
+                    self.te
                         .entry(id.clone())
                         .and_modify(|val| {
                             val.insert(tag.clone());
@@ -190,15 +190,15 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }
     }
 
-    fn insert_dot_elems(&mut self, elems: &HashSet<TagItem<E>>) {
+    fn insert_dot_elems(&mut self, elems: &HashSet<TagElem<E>>) {
         let curr_n = self.cc.get_cc(&self.id, self.ck.sck);
         elems.iter().for_each(|source_tag_e| {
-            let target_tag_e = TagItem::new(
+            let target_tag_e = TagElem::new(
                 self.ck.sck,
                 source_tag_e.n + curr_n,
                 source_tag_e.elem.clone(),
             );
-            self.ti
+            self.te
                 .entry(self.id.clone())
                 .and_modify(|set| {
                     set.insert(target_tag_e.clone());
@@ -244,8 +244,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                     res.cc.insert_cc(trg_t);
                     t.2.iter().for_each(|tag| {
                         let n = (trg_t.n - src_t.n) + tag.n;
-                        let tag = TagItem::new(trg_t.sck, n, tag.elem.clone());
-                        res.ti
+                        let tag = TagElem::new(trg_t.sck, n, tag.elem.clone());
+                        res.te
                             .entry(trg_t.id.clone())
                             .and_modify(|set| {
                                 set.insert(tag.clone());
@@ -259,7 +259,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// TODO
-    pub fn cache_tokens(&mut self, other: &Self) {
+    pub fn cache_tokens(&mut self, _other: &Self) {
         todo!()
     }
 
@@ -277,7 +277,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     fn clear_local(&mut self) {
-        self.ti.remove(&self.id);
+        self.te.remove(&self.id);
         self.cc.clean_id(&self.id, self.ck.sck);
     }
 }
@@ -287,7 +287,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Display for Handoff<E> {
         write!(
             f,
             "id: {}, ck: {:?}\ntier: {:?}\nelems: {:?}\ncc: {:?}\ndc: {:?}\nslots: {:?}\ntokens: {:?}\ntransl: {:?}\n",
-            self.id, self.ck, self.tier, self.ti, self.cc.cc, self.cc.dc, self.slots, self.tokens, self.transl
+            self.id, self.ck, self.tier, self.te, self.cc.cc, self.cc.dc, self.slots, self.tokens, self.transl
         )
     }
 }
