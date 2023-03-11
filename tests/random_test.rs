@@ -58,7 +58,7 @@ pub fn apply_handoff_oper(
 ) {
     match oper {
         RM(elem) => {
-            handoff_t1.rm(elem);
+            handoff_t1.rm_elem(elem);
         }
         ADD(elem) => {
             handoff_t1.add_elem(elem);

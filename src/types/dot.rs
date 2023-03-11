@@ -3,7 +3,7 @@ use std::hash::Hash;
 
 use super::{TagElem, NodeId};
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct Dot {
     pub id: NodeId,
     pub sck: i64,
@@ -26,3 +26,10 @@ impl Display for Dot {
         write!(f, "({},{},{})", self.id, self.sck, self.n)
     }
 }
+
+impl Debug for Dot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+

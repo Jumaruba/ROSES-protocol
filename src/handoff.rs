@@ -2,15 +2,14 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
-
 use crate::dotcontext::DotContext;
-use crate::types::{Ck, Dot, TagElem, NodeId};
+use crate::types::{Ck, Dot, NodeId, TagElem};
 
 #[derive(Debug, Clone)]
 pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     pub id: NodeId,
     pub tier: i32,
-    pub ck: Ck,                                   // Clock  
+    pub ck: Ck,                                   // Clock
     pub cc: DotContext,                           // Causal Context
     pub te: HashMap<NodeId, HashSet<TagElem<E>>>, // Tagged Elements
     pub slots: HashMap<NodeId, Ck>,
@@ -72,20 +71,24 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// Removes an element
-    pub fn rm(&mut self, elem: E) {
-        self.rm_ti_elem(&elem);
+    pub fn rm_elem(&mut self, elem: E) {
+        self.rm_te_elem(&elem);
         self.rm_token_elem(&elem);
     }
 
-    fn rm_ti_elem(&mut self, elem: &E) {
-        self.te.iter_mut().for_each(|(_, set)| {
-            *set = set
-                .drain()
-                .filter(|tag_elem| {
-                    return *elem != tag_elem.elem;
-                })
-                .collect();
-        });
+    fn rm_te_elem(&mut self, elem: &E) {
+        self.te = self
+            .te
+            .drain()
+            .map(|(id, mut set)| {
+                set = set
+                    .drain()
+                    .filter(|tag_elem| *elem != tag_elem.elem)
+                    .collect();
+                (id, set)
+            })
+            .filter(|(_, set)| !set.is_empty())
+            .collect();
     }
 
     fn rm_token_elem(&mut self, elem: &E) {
@@ -115,7 +118,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn create_slot(&mut self, other: &Self) {
         if self.tier < other.tier && other.has_updates() && !self.slots.contains_key(&other.id) {
             self.slots
-                .insert(other.id.clone(), Ck::new(other.ck.sck, other.ck.dck));
+                .insert(other.id.clone(), Ck::new(other.ck.sck, self.ck.dck));
             self.ck.dck += 1;
         }
     }
@@ -146,20 +149,26 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn join(&mut self, other: &Self) {
         // Intersection and elements not known by other.
-        self.te.iter_mut().for_each(|(id, hash)| {
-            *hash = hash
-                .drain()
-                .filter(|tag| {
-                    (other.te.contains_key(id) && other.te[id].contains(tag))
-                        || !other.cc.dot_in(&tag.to_dot(&self.id))
-                })
-                .collect();
-        });
+        self.te = self
+            .te
+            .drain()
+            .map(|(id, mut set)| {
+                let new_set: HashSet<TagElem<E>> = set
+                    .drain()
+                    .filter(|tag| {
+                        (other.te.contains_key(&id) && other.te[&id].contains(tag))
+                            || !other.cc.dot_in(&tag.to_dot(&self.id))
+                    })
+                    .collect();
+                (id, new_set)
+            })
+            .filter(|(_, hash)| !hash.is_empty())
+            .collect();
 
         // Elements known by other but not by self
         for (id, hash) in other.te.iter() {
             for tag in hash.iter() {
-                let dot = tag.to_dot(&self.id);
+                let dot = tag.to_dot(&id);
                 if !self.cc.dot_in(&dot) {
                     self.te
                         .entry(id.clone())
@@ -181,10 +190,10 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             {
                 self.insert_dot_elems(elems);
                 let curr_n = self.cc.get_cc(&self.id, self.ck.sck);
-                let target_dot  = Dot::new(self.id.clone(), self.ck.sck, *n + curr_n);
+                let target_dot = Dot::new(self.id.clone(), self.ck.sck, *n + curr_n);
                 self.cc.insert_cc(&target_dot);
                 let source_dot = Dot::new(src.clone(), ck.sck, *n);
-                self.transl.insert((source_dot, target_dot));
+                self.transl.insert((source_dot, target_dot)); // Creates translation.
                 self.slots.remove(&other.id);
             }
         }
@@ -286,7 +295,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Display for Handoff<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "id: {}, ck: {:?}\ntier: {:?}\nelems: {:?}\ncc: {:?}\ndc: {:?}\nslots: {:?}\ntokens: {:?}\ntransl: {:?}\n",
+            "{}, {:?}\ntier: {:?}\nelems: {:?}\ncc: {:?}\ndc: {:?}\nslots: {:?}\ntokens: {:?}\ntransl: {:?}\n",
             self.id, self.ck, self.tier, self.te, self.cc.cc, self.cc.dc, self.slots, self.tokens, self.transl
         )
     }

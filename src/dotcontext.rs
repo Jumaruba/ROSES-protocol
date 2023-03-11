@@ -21,7 +21,7 @@ impl DotContext {
     }
     /// Gets elements 
     pub fn get_cc(&mut self, id: &NodeId, sck: i64) -> i64 {
-        self.cc.get(&(id.clone(), sck)).unwrap_or(&0).clone()
+        *self.cc.get(&(id.clone(), sck)).unwrap_or(&0)
     }
 
     pub fn insert_cc(&mut self, dot: &Dot){
