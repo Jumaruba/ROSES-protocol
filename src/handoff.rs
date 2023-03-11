@@ -239,10 +239,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         let mut res: Handoff<E> = Handoff::new(other.id.clone(), other.tier);
         // translate tokens
         for (src_t, trg_t) in other.transl.iter() {
-            println!("TOKENS {:?}, {:?}, {:?}", self.tokens, src_t.id, trg_t.id);
-
             if let Some(t) = self.tokens.get(&(src_t.id.clone(), trg_t.id.clone())) {
-                println!(">>>>>>> HERE");
                 if src_t.sck == t.0.sck {
                     res.cc.insert_cc(trg_t);
                     t.2.iter().for_each(|tag| {
@@ -258,7 +255,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 }
             }
         }
-        println!("RES: {}", res);
         self.join(&res);
     }
 
