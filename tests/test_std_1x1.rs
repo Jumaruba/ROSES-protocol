@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use thesis_code::{handoff::Handoff, types::NodeId};
+use handoff_register::{handoff::Handoff, types::NodeId};
 mod utils;
 use utils::{show_blue, show_red};
 

@@ -1,6 +1,6 @@
 
 use color_print::cprintln;
-use thesis_code::handoff::Handoff;
+use handoff_register::handoff::Handoff;
 
 pub fn show_blue(oper: &str, h: &Handoff<i32>) {
     cprintln!("<blue,bold>[{}]</> {}", oper, h);

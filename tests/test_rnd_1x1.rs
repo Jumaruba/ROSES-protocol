@@ -3,11 +3,11 @@ use crate::Op::{ADD, RM};
 use crdt_sample::{AworsetOpt};
 use rand::seq::SliceRandom;
 use rand::Rng;
-use thesis_code::types::NodeId;
+use handoff_register::types::NodeId;
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
-use thesis_code::handoff::Handoff;
+use handoff_register::handoff::Handoff;
 
 pub fn id(id: &str) -> NodeId {
     return NodeId::new(1, id.to_string());
