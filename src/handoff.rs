@@ -109,6 +109,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.discard_transl(other);
         self.translate(other);
         self.merge_vectors(other);
+        println!("MERGE VECTORS{}", self);
         self.discard_tokens(other);
         self.create_token(other);
         self.cache_tokens(other);
@@ -136,6 +137,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     pub fn merge_vectors(&mut self, other: &Self) {
+        println!("MERGE C1 {}", other);
+        println!("MERGE S1 {}", self);
         // Do not merge entries with other.id as key.
         if self.tier <= other.tier {
             let mut prep_other: Self = other.clone();
@@ -144,6 +147,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         } else {
             self.join(&other);
         }
+        println!("MERGE S1 {}", self);
     }
 
     pub fn join(&mut self, other: &Self) {
@@ -248,8 +252,11 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         // translate tokens
         for (src_t, trg_t) in other.transl.iter() {
             if let Some(t) = self.tokens.get(&(src_t.id.clone(), trg_t.id.clone())) {
+                // Match translation and token
                 if src_t.sck == t.0.sck {
-                    res.cc.insert_cc(trg_t);
+                    let range = (trg_t.n-src_t.n+1)..=(trg_t.n+1);
+                    range.for_each(|n| {res.cc.dc.insert(Dot::new(trg_t.id.clone(), trg_t.sck, n));});
+                    //res.cc.insert_cc(trg_t);
                     t.2.iter().for_each(|tag| {
                         let n = (trg_t.n - src_t.n) + tag.n;
                         let tag = TagElem::new(trg_t.sck, n, tag.elem.clone());

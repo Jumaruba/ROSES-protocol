@@ -40,7 +40,7 @@ pub fn transl_1(){
         HashSet::from([
             TagElem::new(1,2,6),
         ]))]);
-        
+
     assert_eq!(s.te, te);
     assert_eq!(c2.te, te);
 
@@ -66,29 +66,20 @@ pub fn transl_2(){
     println!("ADD 6" );
     c2.add_elem(6);
     s.merge(&c2);
-    println!("{}",c2);
     c2.merge(&s); 
     println!("{}",s);
     println!("ADD 5" );
     c2.add_elem(5);
     s.merge(&c2);
-    println!("{}",c2);
     c2.merge(&s); 
-    println!("{}",s);
     println!("ADD 9" );
     c2.add_elem(9);
     s.merge(&c2);
-    println!("{}",c2);
     c2.merge(&s); 
-    println!("{}",s);
     s.merge(&c2);
-    println!("{}",c2);
     c2.merge(&s);
-    println!("{}",s);
     s.merge(&c2);
-    println!("{}",c2);
     s.merge(&c2);
-    println!("{}",c2);
     println!("{:?}", c2.fetch());
 
     assert_eq!(c2.fetch(), HashSet::from([6,5,9]))
