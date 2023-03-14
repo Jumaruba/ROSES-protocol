@@ -10,7 +10,7 @@ use utils::Op::{ADD, RM};
 use utils::{apply_aworset_op, apply_handoff_op, id, HandoffWrapper, gen_rnd_opers};
 
 
-macro_rules! n_client_nodes { () => {10}}
+macro_rules! n_client_nodes { () => {3}}
 macro_rules! n_tests { () => {100} }
 macro_rules! n_oper {() => {3}} // Each has this number of operations to perform
 
@@ -24,8 +24,7 @@ pub fn gen_cli_node() -> Vec<HandoffWrapper>{
             h,
             opers : Vec::new(),
             curr_oper: 0,
-            state: 3, 
-            receive: true
+            state: 4, 
         };
         res.push(wrapper);
     }
@@ -41,26 +40,49 @@ pub fn add_opers(vh: &mut Vec<HandoffWrapper>) {
 
 #[test]
 pub fn main(){
-    let mut cli = gen_cli_node();
+    let mut vec_cli = gen_cli_node();
+    add_opers(&mut vec_cli);
     let mut end : Vec<HandoffWrapper> = Vec::new();
-    add_opers(&mut cli);
+    
     let mut server: Handoff<i32> = Handoff::new(NodeId::new(0, "S".to_string()), 0);
+
     let mut rng = rand::thread_rng();
-    while !cli.is_empty(){
-        let index = rng.gen_range(0..cli.len());
-        let rnd_h = &mut cli[index];
-        if rnd_h.prepare_merge() {
-            if rnd_h.state % 2 == 0{
-                server.join(&rnd_h.h.clone());
+    let mut opers: Vec<Op<i32>> = Vec::new();
+
+    while !vec_cli.is_empty(){
+        let index = rng.gen_range(0..vec_cli.len());
+        let rnd_h = &mut vec_cli[index];
+
+        if let (true, op) =  rnd_h.prepare_merge() {
+            println!("======== STATE {} ========", rnd_h.state);
+            if rnd_h.state % 2 == 1{
+                server.merge(&rnd_h.h.clone());
+                println!(">>> {}", rnd_h.h.clone());
+                println!(">>> {}", server);
             }else {
-                rnd_h.h.join(&server);
+                rnd_h.h.merge(&server);
+                println!(">>> {}", rnd_h.h.clone());
+                println!(">>> {}", server);
+            }
+            if  let Some(op) = op{
+                opers.push(op.clone());
             }
         } else {
-            end.push(cli.remove(index));
+            end.push(vec_cli.remove(index));
         }
+
     }
 
-    assert_eq!(format!("{:?}", end), "");
+    let server_elems = server.fetch();
+    let mut aworset = AworsetOpt::new(crdt_sample::NodeId::new(1, "A".to_string()));
+    for i in opers.iter() {
+        apply_aworset_op(&mut aworset, i.clone());
+    }
+    let elems = aworset.elements();
+    println!("{:?}", opers);
+    println!("{:?}", end); 
+    println!("{:?}", server); 
+    assert_eq!(elems, server_elems);
     //let res = format!("{}", cli);
     //assert_eq!("", res);
 }

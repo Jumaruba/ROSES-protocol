@@ -59,12 +59,23 @@ pub fn get_rnd_oper(min: i32, max: i32) -> Op<i32> {
     oper.choose(&mut rng).unwrap().clone()
 }
 
+
+
 /// Generates a random vector of operations, which can be applied in any register based crdt.
 pub fn gen_rnd_opers(min: i32, max: i32, n_oper: i32) -> Vec<Op<i32>> {
     let mut operations = Vec::new();
-
+    
     for _ in 0..n_oper {
-        operations.push(get_rnd_oper(min, max));
+        let rnd_oper = get_rnd_oper(min, max);
+        if let RM(n) = rnd_oper {
+            if !operations.contains(&ADD(n)) {
+                operations.push(ADD(n));
+            } else {
+                operations.push(rnd_oper);
+            }
+        }else {
+            operations.push(rnd_oper);
+        }
     }
     operations
 }
@@ -75,7 +86,6 @@ pub struct HandoffWrapper {
     pub opers: Vec<Op<i32>>,
     pub curr_oper: usize,
     pub state: i32,
-    pub receive: bool
 }
 
 impl HandoffWrapper {
@@ -92,15 +102,21 @@ impl HandoffWrapper {
         }
     }
 
-    pub fn prepare_merge(&mut self) -> bool {
+    pub fn prepare_merge(&mut self) -> (bool, Option<Op<i32>>) {
         self.update_oper();
         if self.can_consume() {
             if self.state == 3 {
-                println!("{}", self.curr_oper);
-                apply_handoff_op(&mut self.h, self.opers[self.curr_oper].clone());
+                let oper =  self.opers[self.curr_oper].clone();
+                apply_handoff_op(&mut self.h, oper.clone());
+                println!("### {:?}, {}", oper, self.h);
+                return (true, None);
             }
-            return true;    // Return h so it can be merged. 
+            if self.state == 1 {
+                let oper =  self.opers[self.curr_oper].clone();
+                return (true, Some(oper));
+            }
+            return (true, None);    // Return h so it can be merged. 
         }
-        return false;    // Cannot be merged 
+        return (false, None);    // Cannot be merged 
     }
 }

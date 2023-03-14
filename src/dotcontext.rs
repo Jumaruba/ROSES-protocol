@@ -28,6 +28,10 @@ impl DotContext {
         self.cc.insert((dot.id.clone(), dot.sck), dot.n);
     }
 
+    pub fn insert_dc(&mut self, dot: &Dot){
+        self.dc.insert(dot.clone());
+    }
+
     /// Adds a dot to the struct.
     pub fn insert_dot(&mut self, dot: &Dot, compact: Option<bool>) {
         self.dc.insert(dot.clone());
