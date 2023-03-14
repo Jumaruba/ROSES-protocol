@@ -249,7 +249,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         for (src_t, trg_t) in other.transl.iter() {
             if let Some(t) = self.tokens.get(&(src_t.id.clone(), trg_t.id.clone())) {
                 if src_t.sck == t.0.sck {
-                    res.cc.insert_dc(trg_t);
+                    res.cc.insert_cc(trg_t);
                     t.2.iter().for_each(|tag| {
                         let n = (trg_t.n - src_t.n) + tag.n;
                         let tag = TagElem::new(trg_t.sck, n, tag.elem.clone());
