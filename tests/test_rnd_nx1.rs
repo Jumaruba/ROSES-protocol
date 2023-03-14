@@ -7,6 +7,7 @@ use std::collections::HashSet;
 mod utils;
 use utils::Op;
 use utils::Op::{ADD, RM};
+
 use utils::{apply_aworset_op, apply_handoff_op, id, HandoffWrapper, gen_rnd_opers};
 
 
@@ -33,7 +34,7 @@ pub fn gen_cli_node() -> Vec<HandoffWrapper>{
 
 pub fn add_opers(vh: &mut Vec<HandoffWrapper>) {
     for h in vh.iter_mut(){ 
-        let mut opers = gen_rnd_opers(1, 10, n_oper!());
+        let mut opers = gen_rnd_opers(1, 3, n_oper!());
         h.opers.append(&mut opers);
     }
 }
