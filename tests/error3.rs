@@ -67,14 +67,16 @@ pub fn transl_2(){
     c2.add_elem(6);
     s.merge(&c2);
     c2.merge(&s); 
-    println!("{}",s);
     println!("ADD 5" );
     c2.add_elem(5);
     s.merge(&c2);
     c2.merge(&s); 
+    println!("{}", s);
     println!("ADD 9" );
     c2.add_elem(9);
+    println!("{}", c2);
     s.merge(&c2);
+    println!("HEREEEEEEE ======== \n {}", s);
     c2.merge(&s); 
     s.merge(&c2);
     c2.merge(&s);
