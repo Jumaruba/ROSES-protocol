@@ -28,12 +28,9 @@ pub fn transl_1(){
     )]);
 
     s.merge(&c2);
-    println!("{}",s);
     c2.rm_elem(9);
     c2.merge(&s); 
-    println!("{}",c2);
     s.merge(&c2);
-    println!("{}",s);
 
     let te = HashMap::from([(
         id("S"),
@@ -71,18 +68,14 @@ pub fn transl_2(){
     c2.add_elem(5);
     s.merge(&c2);
     c2.merge(&s); 
-    println!("{}", s);
     println!("ADD 9" );
     c2.add_elem(9);
-    println!("{}", c2);
     s.merge(&c2);
-    println!("HEREEEEEEE ======== \n {}", s);
     c2.merge(&s); 
     s.merge(&c2);
     c2.merge(&s);
     s.merge(&c2);
     s.merge(&c2);
-    println!("{:?}", c2.fetch());
 
     assert_eq!(c2.fetch(), HashSet::from([6,5,9]))
 

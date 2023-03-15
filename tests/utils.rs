@@ -68,7 +68,7 @@ pub fn gen_rnd_opers(min: i32, max: i32, n_oper: i32) -> Vec<Op<i32>> {
     for _ in 0..n_oper {
         let rnd_oper = get_rnd_oper(min, max);
         if let RM(n) = rnd_oper {
-            if !operations.contains(&ADD(n)) {
+            if count_ADD(&operations, &n) <= count_RM(&operations, &n) {
                 operations.push(ADD(n));
             } else {
                 operations.push(rnd_oper);
@@ -78,6 +78,13 @@ pub fn gen_rnd_opers(min: i32, max: i32, n_oper: i32) -> Vec<Op<i32>> {
         }
     }
     operations
+}
+
+fn count_ADD(operations: &Vec<Op<i32>>, target: &i32 ) -> usize{
+    operations.iter().filter(|&op| *op == ADD(*target)).count()
+}
+fn count_RM(operations: &Vec<Op<i32>>, target: &i32 ) -> usize{
+    operations.iter().filter(|&op| *op == RM(*target)).count()
 }
 
 #[derive(Clone, Debug)]

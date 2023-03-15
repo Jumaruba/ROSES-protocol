@@ -11,9 +11,9 @@ use utils::Op::{ADD, RM};
 use utils::{apply_aworset_op, apply_handoff_op, id, HandoffWrapper, gen_rnd_opers};
 
 
-macro_rules! n_client_nodes { () => {3}}
+macro_rules! n_client_nodes { () => {2}}
 macro_rules! n_tests { () => {100} }
-macro_rules! n_oper {() => {3}} // Each has this number of operations to perform
+macro_rules! n_oper {() => {2}} // Each has this number of operations to perform
 
 
 
@@ -58,12 +58,10 @@ pub fn main(){
             println!("======== STATE {} ========", rnd_h.state);
             if rnd_h.state % 2 == 1{
                 server.merge(&rnd_h.h.clone());
-                println!(">>> {}", rnd_h.h.clone());
                 println!(">>> {}", server);
             }else {
                 rnd_h.h.merge(&server);
                 println!(">>> {}", rnd_h.h.clone());
-                println!(">>> {}", server);
             }
             if  let Some(op) = op{
                 opers.push(op.clone());
