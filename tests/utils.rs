@@ -100,7 +100,7 @@ impl HandoffWrapper {
         self.curr_oper < self.opers.len()
     }   
 
-    fn update_oper(&mut self){
+    pub fn update_oper(&mut self){
         if self.state == 0 {
             self.curr_oper += 1;
             self.state = 3;
@@ -109,21 +109,5 @@ impl HandoffWrapper {
         }
     }
 
-    pub fn prepare_merge(&mut self) -> (bool, Option<Op<i32>>) {
-        self.update_oper();
-        if self.can_consume() {
-            if self.state == 3 {
-                let oper =  self.opers[self.curr_oper].clone();
-                apply_handoff_op(&mut self.h, oper.clone());
-                println!("### {:?}, {}", oper, self.h);
-                return (true, None);
-            }
-            if self.state == 1 {
-                let oper =  self.opers[self.curr_oper].clone();
-                return (true, Some(oper));
-            }
-            return (true, None);    // Return h so it can be merged. 
-        }
-        return (false, None);    // Cannot be merged 
-    }
+
 }
