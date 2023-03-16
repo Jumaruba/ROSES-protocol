@@ -269,18 +269,15 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.join(&res);
     }
 
-    /// TODO
     pub fn cache_tokens(&mut self, other: &Self) {
         if self.tier < other.tier {
-            for ((src, dst), (ck, n, set)) in other.tokens.iter() {
+            for ((src, dst), v) in other.tokens.iter() {
                 if *src == other.id && *dst != self.id {
                     let keys = &(src.clone(), dst.clone());
-                    let val = if self.tokens.contains_key(keys) && ck.sck >= self.tokens[keys].0.sck {
-                        (ck.clone(), n.clone(), set.clone())
-                    } else {
-                        self.tokens[keys].clone()
-                    };
-                    self.tokens.insert(keys.clone(), val);
+                    let val = self.tokens.entry(keys.clone()).or_insert(v.clone()); 
+                    if val.0.sck <= v.0.sck {
+                        *val = v.clone();
+                    } 
                 }
             }
         }

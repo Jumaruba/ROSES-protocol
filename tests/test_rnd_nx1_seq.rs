@@ -64,8 +64,6 @@ pub fn prepare_merge(h: &mut HandoffWrapper, aw: &mut AworsetOpt<i32>) -> (bool,
             let oper = h.opers[h.curr_oper].clone();
             apply_handoff_op(&mut h.h, oper.clone());
             apply_aworset_op(aw, oper.clone());
-            //println!("### {:?}, {}", oper, h.h);
-            //println!("### {:?}, {:?}", oper, aw);
             return (true, None);
         }
         if h.state == 1 {
