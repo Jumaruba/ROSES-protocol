@@ -12,7 +12,7 @@ use utils::{apply_aworset_op, apply_handoff_op, gen_rnd_opers, id, HandoffWrappe
 
 macro_rules! n_client_nodes {
     () => {
-        2
+        10
     };
 }
 macro_rules! n_tests {
@@ -22,7 +22,7 @@ macro_rules! n_tests {
 }
 macro_rules! n_oper {
     () => {
-        2
+        100
     };
 } // Each has this number of operations to perform
 
@@ -64,7 +64,8 @@ pub fn prepare_merge(h: &mut HandoffWrapper, aw: &mut AworsetOpt<i32>) -> (bool,
             let oper = h.opers[h.curr_oper].clone();
             apply_handoff_op(&mut h.h, oper.clone());
             apply_aworset_op(aw, oper.clone());
-            println!("### {:?}, {}", oper, h.h);
+            //println!("### {:?}, {}", oper, h.h);
+            //println!("### {:?}, {:?}", oper, aw);
             return (true, None);
         }
         if h.state == 1 {
@@ -81,7 +82,6 @@ pub fn main() -> (HashSet<i32>, HashSet<i32>){
     let mut vec_aw_cli = gen_aw_cli_node();
 
     add_opers(&mut vec_cli);
-    let mut end: Vec<HandoffWrapper> = Vec::new();
 
     let mut server: Handoff<i32> = Handoff::new(NodeId::new(0, "S".to_string()), 0);
     let mut server_aw: AworsetOpt<i32> = AworsetOpt::new(crdt_sample::NodeId::new(1, "A".to_string()));
@@ -95,30 +95,27 @@ pub fn main() -> (HashSet<i32>, HashSet<i32>){
         let rnd_aw = &mut vec_aw_cli[index];
 
         if let (true, op) = prepare_merge(rnd_h, rnd_aw) {
-            println!("======== STATE {} ========", rnd_h.state);
             if rnd_h.state % 2 == 1 {
+                let elems = server.te.clone();
                 server.merge(&rnd_h.h.clone());
-                server_aw.join(&rnd_aw);
-                println!("merge with {}", rnd_h.h.id);
-                println!(">>> {}", server);
+                let new_elems = server.te.clone();
+                if elems != new_elems{
+                    server_aw.join(&rnd_aw);
+                }
             } else {
                 rnd_h.h.merge(&server);
                 rnd_aw.join(&server_aw);
-                println!(">>> {}", rnd_h.h.clone());
             }
             if let Some(op) = op {
                 opers.push(op.clone());
             }
         } else {
-            end.push(vec_cli.remove(index));
+            vec_cli.remove(index);
+            vec_aw_cli.remove(index);
         }
     }
 
     let server_elems = server.fetch();
-    let mut aworset = AworsetOpt::new(crdt_sample::NodeId::new(1, "A".to_string()));
-    for i in opers.iter() {
-        apply_aworset_op(&mut aworset, i.clone());
-    }
     let elems = server_aw.elements();
     return (elems, server_elems);
 }
@@ -126,7 +123,6 @@ pub fn main() -> (HashSet<i32>, HashSet<i32>){
 #[test]
 pub fn test(){
     for _ in 0..n_tests!(){
-        println!("NEW TEST");
         let (elems, server_elems) = main();
         assert_eq!(elems, server_elems);
     }
