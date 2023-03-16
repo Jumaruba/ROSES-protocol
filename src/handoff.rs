@@ -184,8 +184,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn fill_slots(&mut self, other: &Self) {
         for ((src, dst), (ck, n, elems)) in other.tokens.iter() {
             if *dst == self.id
-                && self.slots.contains_key(&other.id)
-                && self.slots[&other.id].sck == ck.sck
+                && self.slots.contains_key(&src)
+                && self.slots[&src].sck == ck.sck
+                && !self.has_translation(&Dot::new(src.clone(), ck.sck, *n))
             {
                 self.insert_dot_elems(elems);
                 let curr_n = self.cc.get_cc(&self.id, self.ck.sck);
@@ -239,7 +240,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     /// Applies translatiosn that came from the other node.
-    /// TODO: check this. Supposed to get things on token and translate, only.
     pub fn translate(&mut self, other: &Self) {
         if other.tier >= self.tier {
             return;
@@ -299,6 +299,15 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     fn clear_local(&mut self) {
         self.te.remove(&self.id);
         self.cc.clean_id(&self.id, self.ck.sck);
+    }
+
+    fn has_translation(&self, dot: &Dot) -> bool {
+        for (src_t, dst_t) in self.transl.iter() {
+            if dot == src_t || dot == dst_t {
+                return true;
+            }
+        }
+        return false; 
     }
 }
 
