@@ -10,14 +10,14 @@ use utils::{apply_aworset_op, apply_handoff_op, gen_rnd_opers, HandoffWrapper, O
 
 macro_rules! n_server_nodes { () => { 3 }; }
 macro_rules! n_tests { () => { 100 }; }
-macro_rules! n_oper { () => { 10 }; } // Each has this number of operations to perform
+macro_rules! n_oper { () => { 5 }; } // Each has this number of operations to perform
 macro_rules! prop_server { () => { 0 }; }
 macro_rules! num_elements { () => { 10 }; }
 macro_rules! SHOW_STATE {() => { false };}
 
 pub fn gen_cli() -> HandoffWrapper {
     let h: Handoff<i32> = Handoff::new(NodeId::new(1, "C".to_string()), 1);
-    println!("let mut {}: Handoff<i32> = Handoff::new(NodeId::new(1, \"C\".to_string()), 0);", h.id);
+    C2T!(CREATE, h);
     HandoffWrapper {
         h,
         opers: Vec::new(),
@@ -82,13 +82,12 @@ pub fn main() -> (Vec<Handoff<i32>>, Handoff<i32>, AworsetOpt<i32>){
         let other_index = rng.gen_range(0..n_vec_server);
         let other_s_h = vec_server[other_index].clone();
 
-
         // choose random server.
         let index = rng.gen_range(0..n_vec_server);
         let s_h = &mut vec_server[index];
 
         if prepare_merge(&mut cli, &mut cli_aw) {
-            if propagate_server(&mut rng) && s_h.id != other_s_h.id {
+            if propagate_server(&mut rng) && other_index != index {
                 C2T!(MERGE, s_h, other_s_h, SHOW_STATE!());
             } else {
                 if cli.state % 2 == 1 {
@@ -101,35 +100,40 @@ pub fn main() -> (Vec<Handoff<i32>>, Handoff<i32>, AworsetOpt<i32>){
             break;
         }
     }
-    (vec_server,cli.h, cli_aw)
 
-/*
-    // Converge client
+    C2T!(START_SYNC, cli.h, vec_server.get(vec_server.len()-1).unwrap());
+
+    // Converge client  
     for i in 0..n_vec_server{
         let server = vec_server.get(i).unwrap();
-        cli.h.merge(server);
+        C2T!(MERGE, cli.h, server, SHOW_STATE!()); 
     }
 
 
-    println!("FINAL");
     // Converge servers
     for i in 0..n_vec_server{
         for j in 0..n_vec_server {
-            // Update handoff
-            let other = &vec_server[j].clone();
-            let to_update = vec_server.get_mut(i).unwrap();
-            to_update.merge(&other);
+            if j != i{
+                // Update handoff
+                let other = &vec_server[j].clone();
+                let to_update = vec_server.get_mut(i).unwrap();
+                to_update.merge(&other);
+                C2T!(MERGE, to_update, other, SHOW_STATE!());
+            }
         }
-        println!("server {}", vec_server[i]);
     }
-    return (vec_server,cli.h, cli_aw);*/
+
+    C2T!(END_SYNC);
+    return (vec_server,cli.h, cli_aw);
 }
 
 #[test]
-pub fn test(){
+pub fn test_rnd_1xn_seq(){
     for i in 0..n_tests!(){
+        C2T!(BEGIN);
         println!("======== TEST {} ========", i);
         let (vec_server, cli, cli_aw) = main();
+        C2T!(END);
         assert_eq!(cli_aw.elements(), cli.fetch());
         for i in 0..vec_server.len() {
             assert_eq!(cli_aw.elements(), vec_server[i].fetch());
