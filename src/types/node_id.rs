@@ -2,8 +2,8 @@ use std::fmt::{Display, Debug};
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub struct NodeId {
-    port: i64,
-    addr: String,
+    pub port: i64,
+    pub addr: String,
 }
 
 impl NodeId {
