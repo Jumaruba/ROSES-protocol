@@ -137,7 +137,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn merge_vectors(&mut self, other: &Self) {
         // Do not merge entries with other.id as key.
-        if self.tier <= other.tier {
+        if !(self.tier == 0 && other.tier == 0) && self.tier <= other.tier {
             let mut prep_other: Self = other.clone();
             prep_other.clear_local();
             self.join(&prep_other);
@@ -145,6 +145,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             self.join(&other);
         }
     }
+
 
     pub fn join(&mut self, other: &Self) {
         // Intersection and elements not known by other.
@@ -302,8 +303,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     fn has_translation(&self, dot: &Dot) -> bool {
-        for (src_t, dst_t) in self.transl.iter() {
-            if dot == src_t || dot == dst_t {
+        for (src_t, _) in self.transl.iter() {
+            if dot == src_t  {
                 return true;
             }
         }
@@ -313,10 +314,29 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
 impl<E: Eq + Clone + Hash + Debug + Display> Display for Handoff<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = format!("{}, {:?}\ntier: {:?}\n", self.id,self.ck, self.tier);
+        if !self.te.is_empty() {
+            s.push_str(format!("elems: {:?}\n", self.te).as_str());
+        }
+        if !self.cc.cc.is_empty() {
+            s.push_str(format!("cc: {:?}\n",self.cc.cc).as_str());
+        }
+        if ! self.cc.dc.is_empty(){
+            s.push_str(format!("dc: {:?}\n",self.cc.dc).as_str());
+        }
+        if ! self.slots.is_empty(){
+            s.push_str(format!("slots: {:?}\n",self.slots).as_str());
+        }
+        if ! self.tokens.is_empty(){
+                s.push_str(format!("tokens: {:?}\n",self.tokens).as_str());
+            }
+        if !self.transl.is_empty(){
+                s.push_str(format!("transl: {:?}\n", self.transl).as_str());
+        }
         write!(
             f,
-            "{}, {:?}\ntier: {:?}\nelems: {:?}\ncc: {:?}\ndc: {:?}\nslots: {:?}\ntokens: {:?}\ntransl: {:?}\n",
-            self.id, self.ck, self.tier, self.te, self.cc.cc, self.cc.dc, self.slots, self.tokens, self.transl
+            "{}",
+            s
         )
     }
 }

@@ -1,3 +1,5 @@
+// TODO 
+
 use crdt_sample::AworsetOpt;
 use handoff_register::handoff::Handoff;
 use handoff_register::types::NodeId;
@@ -26,6 +28,12 @@ macro_rules! n_oper {
     };
 } // Each has this number of operations to perform
 
+macro_rules! num_elements {
+    () => {
+        10
+    };
+}
+
 pub fn gen_cli_node() -> Vec<HandoffWrapper> {
     let mut res = Vec::new();
     for i in 0..n_client_nodes!() {
@@ -52,7 +60,7 @@ pub fn gen_aw_cli_node() -> Vec<AworsetOpt<i32>> {
 
 pub fn add_opers(vh: &mut Vec<HandoffWrapper>) {
     for h in vh.iter_mut() {
-        let mut opers = gen_rnd_opers(1, 3, n_oper!());
+        let mut opers = gen_rnd_opers(1, num_elements!(), n_oper!());
         h.opers.append(&mut opers);
     }
 }

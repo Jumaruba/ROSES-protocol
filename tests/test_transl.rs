@@ -80,3 +80,28 @@ pub fn transl_2(){
     assert_eq!(c2.fetch(), HashSet::from([6,5,9]))
 
 }
+
+#[test]
+pub fn transl_3(){
+    let mut c2: Handoff<i32> = Handoff::new(id("C"), 1);
+    let mut s: Handoff<i32> = Handoff::new(id("S"), 0);
+
+    println!("ADD 5");
+    c2.add_elem(5);
+    c2.merge(&s);
+    s.merge(&c2);   // Create slot. 
+    c2.merge(&s);   // Create token.
+    s.merge(&c2);   // Fill slot create translation.
+
+    println!("RM 5");
+    c2.rm_elem(5);
+
+    // Received elements from other node.
+    c2.cc.insert_cc(&Dot::new(id("S"), 1, 1));
+    c2.te.insert(id("S"), HashSet::from([
+        TagElem::new(1,1,5)
+    ]));
+    
+    // Translation remove the conflict.
+    
+}
