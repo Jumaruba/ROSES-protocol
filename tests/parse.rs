@@ -12,6 +12,7 @@ macro_rules! C2T {
 
     (START_SYNC, $x: expr, $y: expr) => {
         println!("-- par SYNC {}, {}", $x.id, $y.id);                // GRAPH 
+        println!("++ println!(\"SYNC STEP\");");
     };
 
     (END_SYNC) => {
@@ -34,8 +35,8 @@ macro_rules! C2T {
             println!("{}", $h1);
         }
 
-        println!("-- {}->>{}: ", $h1.id, $h2.id);                            // GRAPH
-        println!("-- Note over {}: {:?}", $h1.id, $h1.fetch());              // GRAPH
+        println!("-- {}->>{}: ", $h2.id, $h1.id);                            // GRAPH
+        println!("-- Note over {}: {}->{}: {:?}", $h1.id, $h2.id, $h1.id, $h1.fetch());              // GRAPH
     };
 
     // Replicas the creation.
@@ -49,14 +50,18 @@ macro_rules! C2T {
     (OPER, $h: expr, $enum: tt, $oper: expr) => {
         match $oper {
             $enum::ADD(elem) => {
-                println!("-- Note over {}: ADD {}", $h.id, elem);        // GRAPH
-                println!("++ println!(\"RM {}\");", elem);
-                println!("++ {}.rm_elem({});", $h.id, elem);
-            }
-            $enum::RM(elem) => {
-                println!("-- Note over {}: RM {}", $h.id, elem);         // GRAPH
+                println!("-- Note over {}: ADD {}, {:?}", $h.id, elem, $h.fetch());        // GRAPH
                 println!("++ println!(\"ADD {}\");", elem);
                 println!("++ {}.add_elem({});", $h.id, elem);
+                println!("++ println!(\"{{}}\", {});", $h.id);
+
+            }
+            $enum::RM(elem) => {
+                println!("-- Note over {}: RM {}, {:?}", $h.id, elem, $h.fetch());         // GRAPH
+                println!("++ println!(\"RM {}\");", elem);
+                println!("++ {}.rm_elem({});", $h.id, elem);
+                println!("++ println!(\"{{}}\", {});", $h.id);
+
             }
         }
     };

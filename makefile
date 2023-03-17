@@ -31,13 +31,20 @@ code:
 	@echo "Cleaning garbage and moving to template"
 	@echo "use handoff_register::{handoff::Handoff, types::NodeId};" > code.rs
 	@echo "#[test]" >> code.rs 
-	@echo "pub fn test(){" >> code.rs
+	@echo "pub fn code(){" >> code.rs
 	@cat output_3 >> code.rs 
+	@echo "assert_eq!(true, false);" >> code.rs
 	@echo "}" >> code.rs
 	@rm output_*
+	@mv code.rs ./tests/
+
+run_code:
+	@echo "Running code..."
+	@cargo test code > output_code 
+	@echo "Generated output_code file"
 
 clean: 
-	@rm diagram.mermaid output code.rs
+	@rm diagram.mermaid output ./tests/code.rs
 
 
 
