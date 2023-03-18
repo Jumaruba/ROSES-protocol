@@ -15,6 +15,7 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     pub slots: HashMap<NodeId, Ck>,
     pub tokens: HashMap<(NodeId, NodeId), (Ck, i64, HashSet<TagElem<E>>)>,
     pub transl: HashSet<(Dot, Dot)>,
+    pub own_transl: HashSet<(Dot, Dot)>
 }
 
 impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
@@ -28,6 +29,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             slots: HashMap::new(),
             tokens: HashMap::new(),
             transl: HashSet::new(),
+            own_transl: HashSet::new()
         }
     }
 
