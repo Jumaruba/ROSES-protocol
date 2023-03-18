@@ -99,10 +99,13 @@ impl DotContext {
     /// Verifies if the received argument was already seen.
     pub fn dot_in(&self, d: &Dot) -> bool {
         if let Some(val) = self.cc.get(&(d.id.clone(), d.sck)) {
+            //println!("{:?}", self.cc.get(&(d.id.clone(), d.sck)));
+            //println!("{:?}, {:?}", d, self.cc);
             if val >= &d.n {
                 return true;
-            }
+            } 
         }
+        //println!("DC {:?}", self.dc.contains(&d));
         self.dc.contains(&d)
     }
 

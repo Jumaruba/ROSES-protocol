@@ -15,7 +15,6 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     pub slots: HashMap<NodeId, Ck>,
     pub tokens: HashMap<(NodeId, NodeId), (Ck, i64, HashSet<TagElem<E>>)>,
     pub transl: HashSet<(Dot, Dot)>,
-    pub own_transl: HashSet<(Dot, Dot)>
 }
 
 impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
@@ -29,7 +28,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             slots: HashMap::new(),
             tokens: HashMap::new(),
             transl: HashSet::new(),
-            own_transl: HashSet::new()
         }
     }
 
@@ -51,9 +49,11 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     fn get_token_elems(&self) -> HashSet<E> {
         let mut res: HashSet<E> = HashSet::new();
-        for (_, (_, _, elems)) in self.tokens.iter() {
+        for ((src, _), (_, _, elems)) in self.tokens.iter() {
             elems.iter().for_each(|tag_element| {
-                res.insert(tag_element.elem.clone());
+                if *src == self.id {
+                    res.insert(tag_element.elem.clone());
+                }
             });
         }
         res
@@ -114,6 +114,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.discard_tokens(other);
         self.create_token(other);
         self.cache_tokens(other);
+        self.cache_transl(other);
     }
 
     pub fn create_slot(&mut self, other: &Self) {
@@ -242,6 +243,28 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             .collect();
     }
 
+    /// Translation is discarded when the element was already translated.
+    pub fn discard_transl(&mut self, other: &Self) {
+        if self.tier < other.tier {
+            /*println!("TRANSLATION {:?}", self.transl);
+            println!("OTHER {}", other);
+            println!("SELF {}", self);*/
+            self.transl = self
+                .transl
+                .drain()
+                .filter(|(src_dot, dst_dot)|  {
+                    if other.id == src_dot.id {
+                        return !other.cc.dot_in(&dst_dot);
+                    }
+                    return true; 
+                })
+                .collect();
+        }
+        //println!("TRANSLATION AFTER {:?}", self.transl);
+    }
+
+
+
     /// Applies translatiosn that came from the other node.
     pub fn translate(&mut self, other: &Self) {
         if other.tier >= self.tier {
@@ -250,13 +273,13 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         let mut res: Handoff<E> = Handoff::new(other.id.clone(), other.tier);
         // translate tokens
         for (src_t, trg_t) in other.transl.iter() {
-            if let Some(t) = self.tokens.get(&(src_t.id.clone(), trg_t.id.clone())) {
+            if let Some(token) = self.tokens.get(&(src_t.id.clone(), trg_t.id.clone())) {
                 // Match translation and token
-                if src_t.sck == t.0.sck {
+                if src_t.sck == token.0.sck {
                     let range = (trg_t.n-src_t.n+1)..(trg_t.n+1);
                     range.for_each(|n| {res.cc.dc.insert(Dot::new(trg_t.id.clone(), trg_t.sck, n));});
                     //res.cc.insert_cc(trg_t);
-                    t.2.iter().for_each(|tag| {
+                    token.2.iter().for_each(|tag| {
                         let n = (trg_t.n - src_t.n) + tag.n;
                         let tag = TagElem::new(trg_t.sck, n, tag.elem.clone());
                         res.te
@@ -269,6 +292,10 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 }
             }
         }
+        // TODO: delete
+        /*if self.id.addr == "C".to_string(){
+        println!("RES {}", res);
+        }*/
         self.join(&res);
     }
 
@@ -286,13 +313,14 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }
     }
 
-    /// Translation is discarded when the element was already translated.
-    pub fn discard_transl(&mut self, other: &Self) {
-        self.transl = self
-            .transl
-            .drain()
-            .filter(|(_, dst_dot)| !other.cc.dot_in(&dst_dot))
-            .collect();
+    pub fn cache_transl(&mut self, other: &Self){
+        if self.tier == other.tier {
+            let transl: HashSet<(Dot, Dot)> = other.transl.iter().filter(|(_, target)| 
+                target.id == other.id 
+            ).cloned().collect();
+
+            self.transl.extend(transl);
+        }
     }
 
     fn has_updates(&self) -> bool {
@@ -310,8 +338,11 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 return true;
             }
         }
+
         return false; 
     }
+
+    
 }
 
 impl<E: Eq + Clone + Hash + Debug + Display> Display for Handoff<E> {
