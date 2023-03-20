@@ -8,8 +8,8 @@ mod parse;
 use utils::{apply_aworset_op, apply_handoff_op, gen_rnd_opers, HandoffWrapper, Op};
 
 
-macro_rules! n_server_nodes { () => { 3 }; }
-macro_rules! n_tests { () => { 1000 }; }
+macro_rules! n_server_nodes { () => { 1000 }; }
+macro_rules! n_tests { () => { 1 }; }
 macro_rules! n_oper { () => { 10 }; } // Each has this number of operations to perform
 macro_rules! prop_server { () => { 0 }; }
 macro_rules! num_elements { () => { 10 }; }
@@ -105,8 +105,8 @@ pub fn main() -> (Vec<Handoff<i32>>, Handoff<i32>, AworsetOpt<i32>){
 
     // Converge client  
     for i in 0..n_vec_server{
-        let server = vec_server.get(i).unwrap();
-        C2T!(MERGE, cli.h, server, SHOW_STATE!()); 
+        let server = vec_server.get_mut(i).unwrap();
+        C2T!(MERGE, server, cli.h, SHOW_STATE!()); 
     }
 
 

@@ -110,11 +110,11 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.create_slot(other);
         self.discard_transl(other);
         self.translate(other);
+        self.cache_transl(other);
         self.merge_vectors(other);
         self.discard_tokens(other);
         self.create_token(other);
         self.cache_tokens(other);
-        self.cache_transl(other);
     }
 
     pub fn create_slot(&mut self, other: &Self) {
@@ -315,11 +315,19 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn cache_transl(&mut self, other: &Self){
         if self.tier == other.tier {
-            let transl: HashSet<(Dot, Dot)> = other.transl.iter().filter(|(_, target)| 
-                target.id == other.id 
-            ).cloned().collect();
+            println!("TRANSL before {:?}", self.transl);
+            let transl_1: HashSet<(Dot, Dot)> = other.transl.iter().filter(|dt| {
+                // Translation was removed and should remain removed. 
+                return !(self.cc.dot_in(&dt.1) && !self.transl.contains(dt));
+            }).cloned().collect();
 
-            self.transl.extend(transl);
+            self.transl  = self.transl.iter().filter(|dt| {
+                return !(other.cc.dot_in(&dt.1) && !other.transl.contains(dt)) || !other.cc.dot_in(&dt.1);
+            }).cloned().collect();
+
+            self.transl.extend(transl_1);
+
+            println!("TRANSL after {:?}", self.transl);
         }
     }
 
