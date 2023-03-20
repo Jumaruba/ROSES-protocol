@@ -52,7 +52,7 @@ pub fn apply_handoff_op(handoff_t1: &mut Handoff<i32>, oper: Op<i32>) {
 }
 
 // Generates a random operation (ADD(elem) or RM(elem)). Elem is a random element.
-pub fn get_rnd_oper(min: i32, max: i32) -> Op<i32> {
+pub fn gen_rnd_oper(min: i32, max: i32) -> Op<i32> {
     let mut rng = rand::thread_rng();
     let element = rng.gen_range(min..max);
     let oper = vec![ADD(element), RM(element)];
@@ -66,7 +66,7 @@ pub fn gen_rnd_opers(min: i32, max: i32, n_oper: i32) -> Vec<Op<i32>> {
     let mut operations = Vec::new();
     
     for _ in 0..n_oper {
-        let rnd_oper = get_rnd_oper(min, max);
+        let rnd_oper = gen_rnd_oper(min, max);
         if let RM(n) = rnd_oper {
             if count_ADD(&operations, &n) <= count_RM(&operations, &n) {
                 operations.push(ADD(n));

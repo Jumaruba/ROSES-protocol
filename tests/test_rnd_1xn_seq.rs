@@ -8,7 +8,7 @@ mod parse;
 use utils::{apply_aworset_op, apply_handoff_op, gen_rnd_opers, HandoffWrapper, Op};
 
 
-macro_rules! n_server_nodes { () => { 1000 }; }
+macro_rules! n_servers { () => { 1000 }; }
 macro_rules! n_tests { () => { 1 }; }
 macro_rules! n_oper { () => { 10 }; } // Each has this number of operations to perform
 macro_rules! prop_server { () => { 0 }; }
@@ -33,7 +33,7 @@ pub fn gen_cli_aw() -> AworsetOpt<i32>{
 
 pub fn gen_servers() -> Vec<Handoff<i32>>{
     let mut res: Vec<Handoff<i32>> = Vec::new();
-    for i in 0..n_server_nodes!() {
+    for i in 0..n_servers!() {
         let h: Handoff<i32> = Handoff::new(NodeId::new(i, "S".to_string()), 0);
         C2T!(CREATE, h);
         res.push(h);

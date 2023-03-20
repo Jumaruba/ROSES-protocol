@@ -36,7 +36,7 @@ macro_rules! C2T {
         }
 
         println!("-- {}->>{}: ", $h2.id, $h1.id);                            // GRAPH
-        println!("-- Note over {}: {}->{}: {:?}", $h1.id, $h2.id, $h1.id, $h1.fetch());              // GRAPH
+        println!("-- Note over {}: {}<-{}: {:?}", $h1.id, $h1.id, $h2.id, $h1.fetch());              // GRAPH
     };
 
     // Replicas the creation.
