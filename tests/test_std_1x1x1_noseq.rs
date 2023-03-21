@@ -8,9 +8,9 @@ use utils::id;
 use crate::utils::Op;
 
 #[test]
-pub fn test() {
+pub fn test_merge() {
+    C2T!(BEGIN);
     let mut cli: Handoff<i32> = Handoff::new(id("C"), 2);
-    cli.end_cli = true;
     let mut server_1: Handoff<i32> = Handoff::new(NodeId::new(1, "S".to_string()), 1);
     let mut server_0: Handoff<i32> = Handoff::new(NodeId::new(0, "S".to_string()), 0);
     C2T!(CREATE, cli);
@@ -31,8 +31,11 @@ pub fn test() {
     C2T!(MERGE, server_1, server_0, false);
 
     C2T!(MERGE, cli, server_1, false);
-
+    C2T!(END);
+    
     println!("{}", server_0);
     println!("{}", server_1);
     println!("{}", cli);
+
+    assert_eq!(false, true);
 }

@@ -60,7 +60,6 @@ pub fn sync(cli: &mut Handoff<i32> , server_s: &mut Handoff<i32>, server_t: &mut
 
 pub fn test() -> (HashSet<i32> , HashSet<i32>, HashSet<i32>, HashSet<i32>) {
     let mut cli: Handoff<i32> = Handoff::new(id("C"), 2);
-    cli.end_cli = true;
     let mut server_s: Handoff<i32> = Handoff::new(NodeId::new(1, "S".to_string()), 1);
     let mut server_t: Handoff<i32> = Handoff::new(NodeId::new(0, "S".to_string()), 0);
     C2T!(CREATE, cli);

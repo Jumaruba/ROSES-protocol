@@ -29,7 +29,6 @@ pub fn test_add() {
 #[test]
 pub fn test_rm_1() {
     let mut h1: Handoff<i32> = Handoff::new(NodeId::new(1, "A".to_string()), 1);
-    h1.end_cli = true;
     h1.add_elem(22);
     let mut h0: Handoff<i32> = Handoff::new(NodeId::new(1, "B".to_string()), 0);
 
@@ -49,7 +48,6 @@ pub fn test_rm_1() {
 #[test]
 pub fn test_rm_2() {
     let mut h1: Handoff<i32> = Handoff::new(NodeId::new(1, "A".to_string()), 1);
-    h1.end_cli = true;
     h1.add_elem(22);
     let mut h0: Handoff<i32> = Handoff::new(NodeId::new(1, "B".to_string()), 0);
 
@@ -68,7 +66,6 @@ pub fn test_rm_2() {
 #[test]
 pub fn test_rm_3() {
     let mut h1: Handoff<i32> = Handoff::new(NodeId::new(1, "A".to_string()), 1);
-    h1.end_cli = true;
     h1.add_elem(22);
     let mut h0: Handoff<i32> = Handoff::new(NodeId::new(1, "B".to_string()), 0);
 
@@ -86,7 +83,6 @@ pub fn test_rm_3() {
 #[test]
 pub fn test_rm_4() {
     let mut h1: Handoff<i32> = Handoff::new(NodeId::new(1, "A".to_string()), 1);
-    h1.end_cli = true;
     h1.add_elem(22);
     let mut h0: Handoff<i32> = Handoff::new(NodeId::new(1, "B".to_string()), 0);
 
@@ -105,7 +101,6 @@ pub fn test_rm_4() {
 #[test]
 pub fn test_rm_5() {
     let mut h1: Handoff<i32> = Handoff::new(NodeId::new(1, "A".to_string()), 1);
-    h1.end_cli = true;
     h1.add_elem(22);
     let mut h0: Handoff<i32> = Handoff::new(NodeId::new(1, "B".to_string()), 0);
 

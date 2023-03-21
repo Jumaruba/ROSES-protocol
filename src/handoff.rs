@@ -15,7 +15,6 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     pub slots: HashMap<NodeId, Ck>,
     pub tokens: HashMap<(NodeId, NodeId), (Ck, i64, HashSet<TagElem<E>>)>,
     pub transl: HashSet<(Dot, Dot)>,
-    pub end_cli: bool,
 }
 
 impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
@@ -29,7 +28,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             slots: HashMap::new(),
             tokens: HashMap::new(),
             transl: HashSet::new(),
-            end_cli: false,
         }
     }
 
@@ -111,7 +109,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.discard_slot(other);
         self.create_slot(other);
         self.discard_transl(other);
+        println!("BEFORE {}", self);
         self.translate(other);
+        println!("AFTER {}", self);
         self.cache_transl(other);
         self.merge_vectors(other);
         self.discard_tokens(other);
@@ -131,7 +131,8 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     pub fn create_token(&mut self, other: &Self) {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.ck.sck {
             let ck = other.slots[&self.id];
-            let n = self.cc.get_cc(&self.id, self.ck.sck);
+            let n = self.cc.get_cc(&self.id);
+            println!("CURR CC {}", n);
             let set = self.te.get(&self.id).unwrap_or(&HashSet::new()).clone();
             self.tokens
                 .insert((self.id.clone(), other.id.clone()), (ck, n, set));
@@ -149,10 +150,16 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         } else {
             self.join(&other);
         }
+
     }
 
 
     pub fn join(&mut self, other: &Self) {
+     /*  if !other.cc.cc.contains_key(&other.id) {
+            self.cc.clean_id(&other.id);
+            self.te.remove(&other.id);
+        }*/
+
         // Intersection and elements not known by other.
         self.te = self
             .te
@@ -161,6 +168,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 let new_set: HashSet<TagElem<E>> = set
                     .drain()
                     .filter(|tag| {
+                        // intersection & not known 
                         (other.te.contains_key(&id) && other.te[&id].contains(tag)) || !other.cc.dot_in(&tag.to_dot(&id))
                     })
                     .collect();
@@ -195,8 +203,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 && !self.has_translation(&Dot::new(src.clone(), ck.sck, *n))
             {
                 self.insert_dot_elems(elems);
-                let curr_n = self.cc.get_cc(&self.id, self.ck.sck);
+                let curr_n = self.cc.get_cc(&self.id);
                 let target_dot = Dot::new(self.id.clone(), self.ck.sck, *n + curr_n);
+                println!("TARGET DOT {:?}", target_dot);
                 self.cc.insert_cc(&target_dot);
                 let source_dot = Dot::new(src.clone(), ck.sck, *n);
                 self.transl.insert((source_dot, target_dot)); // Creates translation.
@@ -205,8 +214,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }
     }
 
+    /// Insert dot elements in self.te structure. 
     fn insert_dot_elems(&mut self, elems: &HashSet<TagElem<E>>) {
-        let curr_n = self.cc.get_cc(&self.id, self.ck.sck);
+        let curr_n = self.cc.get_cc(&self.id);
         elems.iter().for_each(|source_tag_e| {
             let target_tag_e = TagElem::new(
                 self.ck.sck,
@@ -271,12 +281,13 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         let mut res: Handoff<E> = Handoff::new(other.id.clone(), other.tier);
         // translate tokens
         for (src_t, trg_t) in other.transl.iter() {
+            // Just translate the elements in token.
             if let Some(token) = self.tokens.get(&(src_t.id.clone(), trg_t.id.clone())) {
-                // Match translation and token
+                // Match translation and token, checking source clocks. 
                 if src_t.sck == token.0.sck {
                     let range = (trg_t.n-src_t.n+1)..(trg_t.n+1);
+                    println!("{:?}", range);
                     range.for_each(|n| {res.cc.dc.insert(Dot::new(trg_t.id.clone(), trg_t.sck, n));});
-                    //res.cc.insert_cc(trg_t);
                     token.2.iter().for_each(|tag| {
                         let n = (trg_t.n - src_t.n) + tag.n;
                         let tag = TagElem::new(trg_t.sck, n, tag.elem.clone());
@@ -291,9 +302,9 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             }
         }
         // TODO: delete
-        /*if self.id.addr == "C".to_string(){
+        if self.id.addr == "C".to_string(){
         println!("RES {}", res);
-        }*/
+        }
         self.join(&res);
     }
 
@@ -335,7 +346,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     fn clear_local(&mut self) {
         self.te.remove(&self.id);
-        self.cc.clean_id(&self.id, self.ck.sck);
+        self.cc.clean_id(&self.id);
     }
 
     fn has_translation(&self, dot: &Dot) -> bool {
