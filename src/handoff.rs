@@ -15,6 +15,7 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     pub slots: HashMap<NodeId, Ck>,
     pub tokens: HashMap<(NodeId, NodeId), (Ck, i64, HashSet<TagElem<E>>)>,
     pub transl: HashSet<(Dot, Dot)>,
+    pub end_cli: bool,
 }
 
 impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
@@ -28,16 +29,17 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             slots: HashMap::new(),
             tokens: HashMap::new(),
             transl: HashSet::new(),
+            end_cli: false,
         }
     }
 
     pub fn fetch(&self) -> HashSet<E> {
-        let mut kernel_elems = self.get_ti_elems();
+        let mut kernel_elems = self.get_te_elems();
         kernel_elems.extend(self.get_token_elems());
         kernel_elems
     }
 
-    fn get_ti_elems(&self) -> HashSet<E> {
+    fn get_te_elems(&self) -> HashSet<E> {
         let mut res: HashSet<E> = HashSet::new();
         for (_, set) in self.te.iter() {
             set.iter().for_each(|e| {

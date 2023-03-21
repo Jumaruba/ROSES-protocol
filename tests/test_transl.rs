@@ -74,6 +74,7 @@ pub fn transl_2() {
 }
 
 // Cache transl and discard translation on the right time.
+#[test]
 pub fn transl_4() {
     let mut C1: Handoff<i32> = Handoff::new(NodeId::new(1, "C".to_string()), 1);
     let mut S0: Handoff<i32> = Handoff::new(NodeId::new(0, "S".to_string()), 0);
