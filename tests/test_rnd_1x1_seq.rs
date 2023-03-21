@@ -16,6 +16,7 @@ pub fn test(min: i32, max: i32, n_oper: i32) -> (HashSet<i32>, HashSet<i32>, Has
     // Declare crdts
     let mut handoff_t0: Handoff<i32> = Handoff::new(id("A"), 0);
     let mut handoff_t1: Handoff<i32> = Handoff::new(id("B"), 1);
+    handoff_t1.end_cli = true;
     let mut aworset_opt: AworsetOpt<i32> =
         AworsetOpt::new(crdt_sample::NodeId::new(1, "C".to_string()));
     let opers: Vec<Op<i32>> = gen_rnd_opers(min, max, n_oper);

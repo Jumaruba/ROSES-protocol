@@ -37,7 +37,8 @@ macro_rules! num_elements {
 pub fn gen_cli_node() -> Vec<HandoffWrapper> {
     let mut res = Vec::new();
     for i in 0..n_client_nodes!() {
-        let h: Handoff<i32> = Handoff::new(NodeId::new(i, "C".to_string()), 1);
+        let mut h: Handoff<i32> = Handoff::new(NodeId::new(i, "C".to_string()), 1);
+        h.end_cli = true;
         let wrapper = HandoffWrapper {
             h,
             opers: Vec::new(),

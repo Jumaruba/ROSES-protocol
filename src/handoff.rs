@@ -248,9 +248,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Translation is discarded when the element was already translated.
     pub fn discard_transl(&mut self, other: &Self) {
         if self.tier < other.tier {
-            /*println!("TRANSLATION {:?}", self.transl);
-            println!("OTHER {}", other);
-            println!("SELF {}", self);*/
             self.transl = self
                 .transl
                 .drain()
@@ -262,7 +259,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 })
                 .collect();
         }
-        //println!("TRANSLATION AFTER {:?}", self.transl);
     }
 
 

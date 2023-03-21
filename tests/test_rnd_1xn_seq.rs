@@ -16,7 +16,8 @@ macro_rules! num_elements { () => { 10 }; }
 macro_rules! SHOW_STATE {() => { false };}
 
 pub fn gen_cli() -> HandoffWrapper {
-    let h: Handoff<i32> = Handoff::new(NodeId::new(1, "C".to_string()), 1);
+    let mut h: Handoff<i32> = Handoff::new(NodeId::new(1, "C".to_string()), 1);
+    h.end_cli = true;
     C2T!(CREATE, h);
     HandoffWrapper {
         h,

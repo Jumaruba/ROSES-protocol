@@ -35,6 +35,7 @@ pub fn apply_step(cli: &mut Handoff<i32> , server: &mut Handoff<i32>, curr_step:
 
 pub fn test() -> (HashSet<i32> , HashSet<i32>, HashSet<i32>) {
     let mut cli: Handoff<i32> = Handoff::new(id("C"), 1);
+    cli.end_cli = true;
     let mut server: Handoff<i32> = Handoff::new(id("S"), 0);
     let mut opers: Vec<Op<i32>>  = gen_rnd_opers(1,10, n_oper!());
     let mut aworset: AworsetOpt<i32> = AworsetOpt::new(crdt_sample::NodeId::new(1, "AW".to_string()));
