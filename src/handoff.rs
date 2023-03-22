@@ -132,7 +132,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.ck.sck {
             let ck = other.slots[&self.id];
             let n = self.cc.get_cc(&self.id);
-            println!("CURR CC {}", n);
             let set = self.te.get(&self.id).unwrap_or(&HashSet::new()).clone();
             self.tokens
                 .insert((self.id.clone(), other.id.clone()), (ck, n, set));
@@ -162,7 +161,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }*/
 
         // Intersection and elements not known by other.
-        println!("JOIN ");
         self.te = self
             .te
             .drain()
@@ -170,7 +168,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 let new_set: HashSet<TagElem<E>> = set
                     .drain()
                     .filter(|tag| {
-                        println!("{:?} {:?}", &tag.to_dot(&id), !other.cc.dot_in(&tag.to_dot(&id)));
                         // intersection & not known 
                         (other.te.contains_key(&id) && other.te[&id].contains(tag)) || !other.cc.dot_in(&tag.to_dot(&id))
                     })
@@ -208,7 +205,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 self.insert_dot_elems(elems);
                 let curr_n = self.cc.get_cc(&self.id);
                 let target_dot = Dot::new(self.id.clone(), self.ck.sck, *n + curr_n);
-                println!("TARGET DOT {:?}", target_dot);
                 self.cc.insert_cc(&target_dot);
                 let source_dot = Dot::new(src.clone(), ck.sck, *n);
                 self.transl.insert((source_dot, target_dot)); // Creates translation.
@@ -281,17 +277,25 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         if other.tier >= self.tier {
             return;
         }
+        let mut transl_updates: HashMap<Dot, Dot> = HashMap::new();
         let mut res: Handoff<E> = Handoff::new(other.id.clone(), other.tier);
         // translate tokens
         for (src_t, trg_t) in other.transl.iter() {
-            // Just translate the elements in token.
+            // Translate elements in token.
             if let Some(token) = self.tokens.get(&(src_t.id.clone(), trg_t.id.clone())) {
-                // Match translation and token, checking source clocks. 
+                // Match token to translation by checking source clocks. 
                 if src_t.sck == token.0.sck {
+                    // Correspondent range of n.
                     let range = (trg_t.n-src_t.n+1)..(trg_t.n+1);
-                    println!("{:?}", range);
-                    range.for_each(|n| {res.cc.dc.insert(Dot::new(trg_t.id.clone(), trg_t.sck, n));});
+                    // Add dots to res' cc.  
+                    range.for_each(|n| {
+                        let new_dot = Dot::new(trg_t.id.clone(), trg_t.sck, n);
+                        res.cc.dc.insert(new_dot.clone());
+                        transl_updates.insert(src_t.clone(), new_dot);
+                    });
+                    // Add elements to res.
                     token.2.iter().for_each(|tag| {
+                        // Generate new n for dots. 
                         let n = (trg_t.n - src_t.n) + tag.n;
                         let tag = TagElem::new(trg_t.sck, n, tag.elem.clone());
                         res.te
@@ -304,11 +308,20 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 }
             }
         }
-        // TODO: delete
-        if self.id.addr == "C".to_string(){
-        println!("RES {}", res);
-        }
+
         self.join(&res);
+        self.update_transl(transl_updates);
+    }
+
+    /// Updates the final translation. 
+    pub fn update_transl(&mut self, transl_updates: HashMap<Dot, Dot>){
+        println!("BEFORE UPDATE {:?}", self.transl);
+        println!("TO UPDATE {:?}", transl_updates);
+        self.transl = self.transl.drain().map(|(src_t, trg_t)| {
+            (src_t, transl_updates.get(&trg_t).unwrap_or(&trg_t).clone())
+        }).collect();
+
+        println!("AFTER UPDAPTE {:?}", self.transl);
     }
 
     pub fn cache_tokens(&mut self, other: &Self) {
@@ -327,7 +340,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn cache_transl(&mut self, other: &Self){
         if self.tier == other.tier {
-            println!("TRANSL before {:?}", self.transl);
+            //println!("TRANSL before {:?}", self.transl);
             let transl_1: HashSet<(Dot, Dot)> = other.transl.iter().filter(|dt| {
                 // Translation was removed and should remain removed. 
                 return !(self.cc.dot_in(&dt.1) && !self.transl.contains(dt));
@@ -339,7 +352,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
             self.transl.extend(transl_1);
 
-            println!("TRANSL after {:?}", self.transl);
+            //println!("TRANSL after {:?}", self.transl);
         }
     }
 

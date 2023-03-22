@@ -1,7 +1,7 @@
 .PHONY: graph clean
 all: test graph code
 
-target = test_std_1x1x1_noseq
+target = test_std_1x1x1_noseq_2
 
 test:
 	@echo "Running test..."
