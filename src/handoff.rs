@@ -138,6 +138,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 .insert((self.id.clone(), other.id.clone()), (ck, n, set));
             self.clear_local();
             self.ck.sck += 1;
+            self.set_local_cc();
         }
     }
 
@@ -161,6 +162,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }*/
 
         // Intersection and elements not known by other.
+        println!("JOIN ");
         self.te = self
             .te
             .drain()
@@ -168,6 +170,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 let new_set: HashSet<TagElem<E>> = set
                     .drain()
                     .filter(|tag| {
+                        println!("{:?} {:?}", &tag.to_dot(&id), !other.cc.dot_in(&tag.to_dot(&id)));
                         // intersection & not known 
                         (other.te.contains_key(&id) && other.te[&id].contains(tag)) || !other.cc.dot_in(&tag.to_dot(&id))
                     })
@@ -341,12 +344,16 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     }
 
     fn has_updates(&self) -> bool {
-        self.cc.id_in(&self.id, self.ck.sck)
+        self.cc.get_cc(&self.id) != 0
     }
 
     fn clear_local(&mut self) {
         self.te.remove(&self.id);
         self.cc.clean_id(&self.id);
+    }
+
+    fn set_local_cc(&mut self){
+        self.cc.insert_cc(&Dot::new(self.id.clone(), self.ck.sck, 0));
     }
 
     fn has_translation(&self, dot: &Dot) -> bool {

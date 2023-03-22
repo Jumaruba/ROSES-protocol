@@ -20,7 +20,7 @@ impl DotContext {
         }
     }
     /// Gets elements 
-    pub fn get_cc(&mut self, id: &NodeId) -> i64 {
+    pub fn get_cc(&self, id: &NodeId) -> i64 {
         self.cc.get(&id.clone()).unwrap_or(&(0,0)).1
     }
 
@@ -105,13 +105,12 @@ impl DotContext {
 
     /// Verifies if the received argument was already seen.
     pub fn dot_in(&self, d: &Dot) -> bool {
-        if let Some((sck, n)) = self.cc.get(&d.id.clone()) {
-            if *sck == d.sck && *n >= d.n {
+        if let Some(&(sck, n)) = self.cc.get(&d.id.clone()) {
+            if sck == d.sck && n >= d.n {
                 return true; 
             } 
-            return *sck > d.sck; 
+            return sck > d.sck; 
         }
-        //println!("DC {:?}", self.dc.contains(&d));
         self.dc.contains(&d)
     }
 
