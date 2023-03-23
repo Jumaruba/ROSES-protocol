@@ -22,18 +22,12 @@ macro_rules! C2T {
 
 
     // Two handoff arguments is considered a MERGE.
-    (MERGE, $h1: expr, $h2: expr, $show_state: expr) => {
+    (MERGE, $h1: expr, $h2: expr) => {
         // Generates code.
         println!("++ {}.merge(&{});", $h1.id, $h2.id);
         println!("++ println!(\"{{}}\", {});", $h1.id);
         // Executes merge bewtween h1 and h2.
         $h1.merge(&$h2);
-
-        // Shows state after merge.
-        if $show_state {
-            println!("[ MERGE ] {} < {}", $h1.id, $h2.id);
-            println!("{}", $h1);
-        }
 
         println!("-- {}->>{}: ", $h2.id, $h1.id);                            // GRAPH
         println!("-- Note over {}: {}<-{}: {:?}", $h1.id, $h1.id, $h2.id, $h1.fetch());              // GRAPH

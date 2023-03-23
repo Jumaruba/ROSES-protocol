@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use handoff_register::{handoff::Handoff, types::NodeId};
-mod utils;
-use utils::{show_blue, show_red};
+mod tester;
+use tester::utils::{show_blue, show_red};
 
 
 #[test]

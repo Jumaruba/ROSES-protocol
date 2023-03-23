@@ -1,9 +1,9 @@
 use crdt_sample::AworsetOpt;
 use handoff_register::handoff::Handoff;
 use std::collections::HashSet;
-mod utils;
-use utils::Op;
-use utils::{apply_aworset_op, apply_handoff_op, id, gen_rnd_opers};
+mod tester;
+use tester::Op;
+use tester::utils::{apply_aworset_op, apply_handoff_op, id, gen_rnd_opers};
 
 pub fn handoff_protocol(handoff_t0: &mut Handoff<i32>, handoff_t1: &mut Handoff<i32>) {
     handoff_t0.merge(handoff_t1); // Create slot

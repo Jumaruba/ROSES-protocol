@@ -4,8 +4,8 @@ use handoff_register::{
     handoff::Handoff,
     types::{Ck, Dot, NodeId, TagElem},
 };
-mod utils;
-use utils::id;
+mod tester;
+use tester::utils::id;
 
 #[test]
 pub fn transl_1() {

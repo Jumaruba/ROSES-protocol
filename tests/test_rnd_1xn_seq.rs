@@ -3,9 +3,9 @@ use handoff_register::handoff::Handoff;
 use handoff_register::types::NodeId;
 use rand::Rng;
 use rand::rngs::ThreadRng;
-mod utils;
-mod parse; 
-use utils::{apply_aworset_op, apply_handoff_op, gen_rnd_opers, HandoffWrapper, Op};
+mod tester;
+use tester::utils::{apply_aworset_op, apply_handoff_op, gen_rnd_opers, HandoffWrapper};
+use tester::Op;
 
 
 macro_rules! n_servers { () => { 1000 }; }
@@ -13,7 +13,6 @@ macro_rules! n_tests { () => { 1 }; }
 macro_rules! n_oper { () => { 10 }; } // Each has this number of operations to perform
 macro_rules! prop_server { () => { 0 }; }
 macro_rules! num_elements { () => { 10 }; }
-macro_rules! SHOW_STATE {() => { false };}
 
 pub fn gen_cli() -> HandoffWrapper {
     let h: Handoff<i32> = Handoff::new(NodeId::new(1, "C".to_string()), 1);
@@ -88,12 +87,12 @@ pub fn main() -> (Vec<Handoff<i32>>, Handoff<i32>, AworsetOpt<i32>){
 
         if prepare_merge(&mut cli, &mut cli_aw) {
             if propagate_server(&mut rng) && other_index != index {
-                C2T!(MERGE, s_h, other_s_h, SHOW_STATE!());
+                C2T!(MERGE, s_h, other_s_h);
             } else {
                 if cli.state % 2 == 1 {
-                    C2T!(MERGE, s_h, cli.h.clone(), SHOW_STATE!());
+                    C2T!(MERGE, s_h, cli.h.clone());
                 } else {
-                    C2T!(MERGE, cli.h, s_h.clone(), SHOW_STATE!());
+                    C2T!(MERGE, cli.h, s_h.clone());
                 }
             }
         } else {
@@ -106,7 +105,7 @@ pub fn main() -> (Vec<Handoff<i32>>, Handoff<i32>, AworsetOpt<i32>){
     // Converge client  
     for i in 0..n_vec_server{
         let server = vec_server.get_mut(i).unwrap();
-        C2T!(MERGE, server, cli.h, SHOW_STATE!()); 
+        C2T!(MERGE, server, cli.h); 
     }
 
 
@@ -118,7 +117,7 @@ pub fn main() -> (Vec<Handoff<i32>>, Handoff<i32>, AworsetOpt<i32>){
                 let other = &vec_server[j].clone();
                 let to_update = vec_server.get_mut(i).unwrap();
                 to_update.merge(&other);
-                C2T!(MERGE, to_update, other, SHOW_STATE!());
+                C2T!(MERGE, to_update, other);
             }
         }
     }
