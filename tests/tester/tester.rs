@@ -50,7 +50,7 @@ impl Tester {
         for i in 0..n_layers - 1 {
             for j in 0..n_servers {
                 let h: Handoff<i32> = Handoff::new(NodeId::new(j, "S".to_string()), i);
-                let aw = Wrapper::new(crdt_sample::NodeId::new(j, "S".to_string()));
+                let aw = Wrapper::new(crdt_sample::NodeId::new(j, "S".to_string()), i.into());
                 C2T!(CREATE, h);
                 self.servers.push(h);
                 self.aw_server.push(aw);
@@ -62,7 +62,7 @@ impl Tester {
     fn init_clis(&mut self, n_clis: i64, n_layers: i32) {
         for i in 0..n_clis {
             let h: Handoff<i32> = Handoff::new(NodeId::new(i, "C".to_string()), n_layers - 1);
-            let aw = Wrapper::new(crdt_sample::NodeId::new(i, "C".to_string()));
+            let aw = Wrapper::new(crdt_sample::NodeId::new(i, "C".to_string()), (n_layers-1).into());
             self.clis.push(h);
             self.aw_clis.push(aw);
         }
@@ -98,7 +98,12 @@ impl Tester {
                 let random_aw = self.aw_server.get_mut(random_index).unwrap();
                 C2T!(MERGE, random_h, self.clis[i]);
                 
-                
+                // Get awset to propagate.
+                let aw = self.aw_clis.get_mut(i).unwrap().propagate(&random_aw, random_h.tier);
+                let id = format!("{}", self.clis[i].id);
+                random_aw.join(aw, id);
+                println!("CLIENT SEND{:?}", self.aw_clis[i]);
+                println!("SERVER RECEIVE {:?}", random_aw);
             }
         }
     }
@@ -106,38 +111,37 @@ impl Tester {
     pub fn disseminate_server(&mut self) {
         let mut rng = rand::thread_rng();
         let servers_clone = self.servers.clone();
-        let aw_servers_clone = self.aw_server.clone();
         for i in 0..self.servers.len() {
             while rng.gen_range(0.0..1.0) <= self.disseminate_prob {
                 let random_index = rng.gen_range(0..self.servers.len());
                 let random_h: &mut Handoff<i32>;
-                let random_aw: &mut Wrapper;
+                let mut random_aw: Wrapper;
+                let id = format!("{}", self.servers[i].id); 
 
                 // Propagate to client.
                 if rng.gen_range(0..=1) == 1 {
                     random_h = self.clis.get_mut(random_index).unwrap();
-                    random_aw = self.aw_clis.get_mut(random_index).unwrap();
+                    random_aw = self.aw_clis[random_index].clone();
+                    let aw = self.aw_server[i].propagate(&random_aw, random_h.tier);
+
+                    random_aw.join(aw, id);
+                    println!("CLIENT RECEIVE {:?}", random_aw);
+                    self.aw_clis[random_index] = random_aw;   
                 }
                 // Propagate to server.
                 else {
-                    random_h = self.servers.get_mut(random_index).unwrap();
-                    random_aw = self.aw_server.get_mut(random_index).unwrap();
                     // Server cannot propagate to itself.
                     if random_index == i {
                         return;
                     }
+                    random_h = self.servers.get_mut(random_index).unwrap();
+                    random_aw = self.aw_server[random_index].clone();
+                    let aw = self.aw_server[i].propagate(&random_aw, random_h.tier);
+                    random_aw.join(aw, id);
+                    self.aw_server[random_index] = random_aw;   
                 }
 
-                // Propagate
-                let tokens = random_h.tokens.clone();
                 C2T!(MERGE, random_h, servers_clone[i]);
-                random_aw.join(&aw_servers_clone[i]);
-
-                // Update tokens in aworset.
-                if tokens != random_h.tokens && !random_h.tokens.is_empty() {
-                    random_aw.prepare_dispatch();
-                }
-                println!("{:?}", random_aw.clone());
             }
         }
     }
@@ -168,7 +172,7 @@ impl Tester {
             let cli_fetch = self.clis[i].fetch();
             let aw_cli_fetch = self.aw_clis[i].fetch();
             if cli_fetch != aw_cli_fetch {
-                println!("CLI {} : {:?} x {:?}", i, cli_fetch, aw_cli_fetch);
+                println!("CLI {} : h - {:?} x aw - {:?}", i, cli_fetch, aw_cli_fetch);
                 return false;
             }
         }
@@ -177,7 +181,7 @@ impl Tester {
             let server_fetch = self.servers[i].fetch();
             let aw_server_fetch = self.aw_server[i].fetch();
             if server_fetch != aw_server_fetch {
-                println!("SERVER {} : {:?} x {:?}", i, server_fetch, aw_server_fetch);
+                println!("SERVER {} :: h - {:?} x aw - {:?}", i, server_fetch, aw_server_fetch);
                 return false;
             }
         }

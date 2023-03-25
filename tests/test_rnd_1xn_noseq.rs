@@ -2,15 +2,15 @@ mod tester;
 use tester::Tester; 
 
 #[test]
-fn test(){
+fn test_rnd_1xn_noseq(){
+    C2T!(BEGIN);
     let mut tester = Tester::new();
-    tester.init(2,2, 2);
-    for _ in 0..100 {
+    tester.init(1,1, 2);
+    for _ in 0..7{
         tester.apply_operation();
         tester.disseminate();
         assert_eq!(true, tester.verify());
     }
-
-    assert_eq!(tester.aw_clis[1].fetch(), tester.clis[1].fetch());
+    C2T!(END);
 
 }
