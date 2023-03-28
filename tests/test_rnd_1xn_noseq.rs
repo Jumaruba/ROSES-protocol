@@ -5,12 +5,17 @@ use tester::Tester;
 fn test_rnd_1xn_noseq(){
     C2T!(BEGIN);
     let mut tester = Tester::new();
-    tester.init(1,1, 2);
-    for _ in 0..7{
-        tester.apply_operation();
-        tester.disseminate();
-        assert_eq!(true, tester.verify());
+    let n_tests = 1; 
+    tester.init(3, 3, 2);
+    for _ in 0..n_tests {
+        for _ in 0..7{
+            tester.apply_operation();
+            tester.disseminate();
+        }
+        println!("{:?}", tester);
+        assert_eq!(tester.verify(), true);
     }
+
     C2T!(END);
 
 }

@@ -1,20 +1,21 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::C2T;
 use handoff_register::{handoff::Handoff, types::NodeId};
 
-use super::{Op, Wrapper};
-use rand::seq::SliceRandom;
+use super::Op;
 use rand::Rng;
 
 #[derive(Debug)]
 pub struct Tester {
     pub clis: Vec<Handoff<i32>>,
     pub servers: Vec<Handoff<i32>>,
-    pub aw_clis: Vec<Wrapper>,
-    pub aw_server: Vec<Wrapper>,
+    pub peculiarity: Vec<Option<i32>>,
+    pub times_peculiarity: Vec<i32>,
+    pub final_elements: HashMap<i32, i32>,
     disseminate_prob: f64,
     oper_prob: f64,
+    n_elements: i64,
 }
 
 impl Tester {
@@ -22,10 +23,12 @@ impl Tester {
         Self {
             clis: Vec::new(),
             servers: Vec::new(),
-            aw_clis: Vec::new(),
-            aw_server: Vec::new(),
+            peculiarity: Vec::new(),
+            times_peculiarity: Vec::new(), // How many times the peculiarity was activated.
+            final_elements: HashMap::new(), // Elements that should be in the final state.
             disseminate_prob: 0.5,
             oper_prob: 0.3,
+            n_elements: 10,
         }
     }
 
@@ -43,6 +46,7 @@ impl Tester {
     pub fn init(&mut self, n_clis: i64, n_servers: i64, n_layers: i32) {
         self.init_clis(n_clis, n_layers);
         self.init_servers(n_servers, n_layers);
+        self.set_peculiarity();
     }
 
     /// Initiliazes a given number of servers.
@@ -50,10 +54,8 @@ impl Tester {
         for i in 0..n_layers - 1 {
             for j in 0..n_servers {
                 let h: Handoff<i32> = Handoff::new(NodeId::new(j, "S".to_string()), i);
-                let aw = Wrapper::new(crdt_sample::NodeId::new(j, "S".to_string()), i.into());
                 C2T!(CREATE, h);
                 self.servers.push(h);
-                self.aw_server.push(aw);
             }
         }
     }
@@ -62,9 +64,40 @@ impl Tester {
     fn init_clis(&mut self, n_clis: i64, n_layers: i32) {
         for i in 0..n_clis {
             let h: Handoff<i32> = Handoff::new(NodeId::new(i, "C".to_string()), n_layers - 1);
-            let aw = Wrapper::new(crdt_sample::NodeId::new(i, "C".to_string()), (n_layers-1).into());
             self.clis.push(h);
-            self.aw_clis.push(aw);
+        }
+    }
+
+    /// Each node has a probability of having a peculiarity.
+    /// A peculiarity is a number that is not desired by the node.
+    pub fn set_peculiarity(&mut self) {
+        let mut rng = rand::thread_rng();
+        let mut pec: HashSet<i32> = HashSet::new(); // store peculiarities, to generate unique ones.
+        for i in 0..self.clis.len() {
+            self.times_peculiarity.push(0);
+            self.peculiarity.push(None);
+            if rng.gen_bool(0.5) {
+                let element: i32 = rng.gen_range(0..self.n_elements).try_into().unwrap();
+                if !pec.contains(&element) {
+                    pec.insert(element);
+                    self.peculiarity[i] = Some(element);
+                }
+            }
+        }
+    }
+
+    /// Activates peculiarity if necessary.
+    pub fn activate_peculiarity(&mut self, pos: usize) {
+        if self.peculiarity[pos].is_some()
+            && self.clis[pos]
+                .fetch()
+                .contains(&self.peculiarity[pos].unwrap())
+        {
+            Self::apply_handoff_op(
+                self.clis.get_mut(pos).unwrap(),
+                Op::RM(self.peculiarity[pos].unwrap()),
+            );
+            self.times_peculiarity[pos] += 1;
         }
     }
 
@@ -72,12 +105,16 @@ impl Tester {
     pub fn apply_operation(&mut self) {
         let mut rng = rand::thread_rng();
         for i in 0..self.clis.len() {
+            self.activate_peculiarity(i);
             // Many operations can be applied.
             while rng.gen_range(0.0..1.0) <= self.oper_prob {
-                let oper = Self::gen_rnd_oper();
-                Self::apply_handoff_op(self.clis.get_mut(i).unwrap(), oper.clone());
-                self.aw_clis.get_mut(i).unwrap().apply_oper(oper.clone());
-                C2T!(OPER, self.clis[i], Op, oper);
+                let element = rng.gen_range(0..10);
+                Self::apply_handoff_op(self.clis.get_mut(i).unwrap(), Op::ADD(element));
+                self.final_elements
+                    .entry(element)
+                    .and_modify(|times| *times += 1)
+                    .or_insert(1);
+                C2T!(OPER, self.clis[i], Op, Op::ADD(element));
             }
         }
     }
@@ -95,15 +132,7 @@ impl Tester {
             while rng.gen_range(0.0..1.0) <= self.disseminate_prob {
                 let random_index = rng.gen_range(0..self.servers.len());
                 let random_h = self.servers.get_mut(random_index).unwrap();
-                let random_aw = self.aw_server.get_mut(random_index).unwrap();
                 C2T!(MERGE, random_h, self.clis[i]);
-                
-                // Get awset to propagate.
-                let aw = self.aw_clis.get_mut(i).unwrap().propagate(&random_aw, random_h.tier);
-                let id = format!("{}", self.clis[i].id);
-                random_aw.join(aw, id);
-                println!("CLIENT SEND{:?}", self.aw_clis[i]);
-                println!("SERVER RECEIVE {:?}", random_aw);
             }
         }
     }
@@ -115,18 +144,10 @@ impl Tester {
             while rng.gen_range(0.0..1.0) <= self.disseminate_prob {
                 let random_index = rng.gen_range(0..self.servers.len());
                 let random_h: &mut Handoff<i32>;
-                let mut random_aw: Wrapper;
-                let id = format!("{}", self.servers[i].id); 
-
+                let id = format!("{}", self.servers[i].id);
                 // Propagate to client.
                 if rng.gen_range(0..=1) == 1 {
                     random_h = self.clis.get_mut(random_index).unwrap();
-                    random_aw = self.aw_clis[random_index].clone();
-                    let aw = self.aw_server[i].propagate(&random_aw, random_h.tier);
-
-                    random_aw.join(aw, id);
-                    println!("CLIENT RECEIVE {:?}", random_aw);
-                    self.aw_clis[random_index] = random_aw;   
                 }
                 // Propagate to server.
                 else {
@@ -135,10 +156,6 @@ impl Tester {
                         return;
                     }
                     random_h = self.servers.get_mut(random_index).unwrap();
-                    random_aw = self.aw_server[random_index].clone();
-                    let aw = self.aw_server[i].propagate(&random_aw, random_h.tier);
-                    random_aw.join(aw, id);
-                    self.aw_server[random_index] = random_aw;   
                 }
 
                 C2T!(MERGE, random_h, servers_clone[i]);
@@ -158,34 +175,73 @@ impl Tester {
         }
     }
 
-    // Generates a random operation (ADD(elem) or RM(elem)). Elem is a random element.
-    pub fn gen_rnd_oper() -> Op<i32> {
-        let mut rng = rand::thread_rng();
-        let element = rng.gen_range(0..10);
-        let oper = vec![Op::ADD(element), Op::RM(element)];
-        oper.choose(&mut rng).unwrap().clone()
-    }
-
     /// Returns true case the states are correct, and false otherwise.
-    pub fn verify(&self) -> bool {
-        for i in 0..self.clis.len() {
-            let cli_fetch = self.clis[i].fetch();
-            let aw_cli_fetch = self.aw_clis[i].fetch();
-            if cli_fetch != aw_cli_fetch {
-                println!("CLI {} : h - {:?} x aw - {:?}", i, cli_fetch, aw_cli_fetch);
+    pub fn verify(&mut self) -> bool {
+        for i in 0..self.clis.len(){
+            self.activate_peculiarity(i);
+        }
+
+        // Sync with user.
+        for _ in 0..6 {
+            for cli in self.clis.iter_mut() {
+                for server in self.servers.iter_mut() {
+                    C2T!(MERGE, server, cli);
+                    C2T!(MERGE, cli, server);
+                }
+            }
+        }
+        // Sync between servers.
+        let server_size = self.servers.len();
+        for _ in 0..3 {
+            for server_2 in 0..server_size {
+                let server_clone = self.servers[server_2].clone();
+                for server in self.servers.iter_mut() {
+                    C2T!(MERGE, server, server_clone);
+                }
+            }
+        }
+
+
+
+        // Check peculiarity activations
+        println!("VERIFY PECULIARITY");
+        for i in 0..self.peculiarity.len() {
+            if let Some(peculiarity) = self.peculiarity[i] {
+                let n_activations = self.times_peculiarity[i];
+                if n_activations > *self.final_elements.get(&peculiarity).unwrap_or(&0) {
+                    return false;
+                }
+            }
+        }
+        // Remove peculiar elements from desired list.
+        for i in self.peculiarity.iter() {
+            if let Some(pec) = i {
+                self.final_elements.remove(pec);
+            }
+        }
+
+        let final_elements: HashSet<i32> = self.final_elements.keys().cloned().collect();
+        println!("VERIFY CLIENTS");
+        // Check clients
+        for cli in self.clis.iter() {
+            if cli.fetch() != final_elements {
+                println!("==== FAIL === ");
+                println!("FINAL {:?}", final_elements);
+                println!("CLIENT {:?}", cli.fetch());
                 return false;
             }
         }
 
-        for i in 0..self.aw_server.len() {
-            let server_fetch = self.servers[i].fetch();
-            let aw_server_fetch = self.aw_server[i].fetch();
-            if server_fetch != aw_server_fetch {
-                println!("SERVER {} :: h - {:?} x aw - {:?}", i, server_fetch, aw_server_fetch);
+        // Check servers.
+        println!("VERIFY SERVERS");
+        for server in self.servers.iter() {
+            if server.fetch() != final_elements {
+                println!("=== FAIL ====");
+                println!("FINAL {:?}", final_elements);
+                println!("SERVER {:?}", server.fetch());
                 return false;
             }
         }
-        return true;
+        true
     }
-
 }

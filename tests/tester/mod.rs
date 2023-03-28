@@ -1,8 +1,6 @@
 mod tester;
 pub use tester::Tester;
 
-mod wrapper;
-pub use wrapper::Wrapper;
 
 pub mod utils;
 
