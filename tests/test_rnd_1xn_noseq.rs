@@ -6,9 +6,9 @@ fn test_rnd_1xn_noseq(){
     C2T!(BEGIN);
     let mut tester = Tester::new();
     let n_tests = 1; 
-    tester.init(3, 3, 2);
+    tester.init(100, 100, 2);
     for _ in 0..n_tests {
-        for _ in 0..7{
+        for _ in 0..20 {
             tester.apply_operation();
             tester.disseminate();
         }

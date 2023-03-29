@@ -88,15 +88,8 @@ impl Tester {
 
     /// Activates peculiarity if necessary.
     pub fn activate_peculiarity(&mut self, pos: usize) {
-        if self.peculiarity[pos].is_some()
-            && self.clis[pos]
-                .fetch()
-                .contains(&self.peculiarity[pos].unwrap())
-        {
-            Self::apply_handoff_op(
-                self.clis.get_mut(pos).unwrap(),
-                Op::RM(self.peculiarity[pos].unwrap()),
-            );
+        if self.peculiarity[pos].is_some() && self.clis[pos].fetch().contains(&self.peculiarity[pos].unwrap()) {
+            Self::apply_handoff_op(self.clis.get_mut(pos).unwrap(), Op::RM(self.peculiarity[pos].unwrap()));
             self.times_peculiarity[pos] += 1;
         }
     }
@@ -107,14 +100,14 @@ impl Tester {
         for i in 0..self.clis.len() {
             self.activate_peculiarity(i);
             // Many operations can be applied.
-            while rng.gen_range(0.0..1.0) <= self.oper_prob {
+            while rng.gen_bool(self.oper_prob){
                 let element = rng.gen_range(0..10);
                 Self::apply_handoff_op(self.clis.get_mut(i).unwrap(), Op::ADD(element));
+                // Store how many times the element was added. 
                 self.final_elements
                     .entry(element)
                     .and_modify(|times| *times += 1)
                     .or_insert(1);
-                C2T!(OPER, self.clis[i], Op, Op::ADD(element));
             }
         }
     }
@@ -168,15 +161,29 @@ impl Tester {
         match oper {
             Op::RM(elem) => {
                 h.rm_elem(elem);
+                C2T!(OPER, h, Op, Op::RM(elem));
             }
             Op::ADD(elem) => {
                 h.add_elem(elem);
+                C2T!(OPER, h, Op, Op::ADD(elem));
             }
         }
     }
 
     /// Returns true case the states are correct, and false otherwise.
     pub fn verify(&mut self) -> bool {
+
+
+        // Sync with user.
+        for _ in 0..6 {
+            for cli in self.clis.iter_mut() {
+                for server in self.servers.iter_mut() {
+                    C2T!(MERGE, server, cli);
+                    C2T!(MERGE, cli, server);
+                }
+            }
+        }
+
         for i in 0..self.clis.len(){
             self.activate_peculiarity(i);
         }
@@ -190,6 +197,7 @@ impl Tester {
                 }
             }
         }
+
         // Sync between servers.
         let server_size = self.servers.len();
         for _ in 0..3 {
