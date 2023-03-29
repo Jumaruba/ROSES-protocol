@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync,
+};
 
 use crate::C2T;
 use handoff_register::{handoff::Handoff, types::NodeId};
@@ -13,7 +16,9 @@ pub struct Tester {
     pub peculiarity: Vec<Option<i32>>,
     pub times_peculiarity: Vec<i32>,
     pub final_elements: HashMap<i32, i32>,
+    pub associated_server: Vec<i32>,
     disseminate_prob: f64,
+    fail_prob: f64,
     oper_prob: f64,
     n_elements: i64,
 }
@@ -26,8 +31,10 @@ impl Tester {
             peculiarity: Vec::new(),
             times_peculiarity: Vec::new(), // How many times the peculiarity was activated.
             final_elements: HashMap::new(), // Elements that should be in the final state.
-            disseminate_prob: 0.5,
+            associated_server: Vec::new(),
+            disseminate_prob: 0.3, // Probability to disseminate to another server.
             oper_prob: 0.3,
+            fail_prob: 0.5,
             n_elements: 10,
         }
     }
@@ -47,6 +54,7 @@ impl Tester {
         self.init_clis(n_clis, n_layers);
         self.init_servers(n_servers, n_layers);
         self.set_peculiarity();
+        self.associate_server();
     }
 
     /// Initiliazes a given number of servers.
@@ -64,6 +72,7 @@ impl Tester {
     fn init_clis(&mut self, n_clis: i64, n_layers: i32) {
         for i in 0..n_clis {
             let h: Handoff<i32> = Handoff::new(NodeId::new(i, "C".to_string()), n_layers - 1);
+            C2T!(CREATE, h);
             self.clis.push(h);
         }
     }
@@ -86,10 +95,26 @@ impl Tester {
         }
     }
 
+    /// Associates a server to a client.
+    pub fn associate_server(&mut self) {
+        let mut rng = rand::thread_rng();
+        for i in 0..self.clis.len() {
+            let server_index: i32 = rng.gen_range(0..self.servers.len()).try_into().unwrap();
+            self.associated_server.push(server_index);
+        }
+    }
+
     /// Activates peculiarity if necessary.
     pub fn activate_peculiarity(&mut self, pos: usize) {
-        if self.peculiarity[pos].is_some() && self.clis[pos].fetch().contains(&self.peculiarity[pos].unwrap()) {
-            Self::apply_handoff_op(self.clis.get_mut(pos).unwrap(), Op::RM(self.peculiarity[pos].unwrap()));
+        if self.peculiarity[pos].is_some()
+            && self.clis[pos]
+                .fetch()
+                .contains(&self.peculiarity[pos].unwrap())
+        {
+            Self::apply_handoff_op(
+                self.clis.get_mut(pos).unwrap(),
+                Op::RM(self.peculiarity[pos].unwrap()),
+            );
             self.times_peculiarity[pos] += 1;
         }
     }
@@ -100,10 +125,10 @@ impl Tester {
         for i in 0..self.clis.len() {
             self.activate_peculiarity(i);
             // Many operations can be applied.
-            while rng.gen_bool(self.oper_prob){
+            while rng.gen_bool(self.oper_prob) {
                 let element = rng.gen_range(0..10);
                 Self::apply_handoff_op(self.clis.get_mut(i).unwrap(), Op::ADD(element));
-                // Store how many times the element was added. 
+                // Store how many times the element was added.
                 self.final_elements
                     .entry(element)
                     .and_modify(|times| *times += 1)
@@ -118,39 +143,35 @@ impl Tester {
         self.disseminate_server();
     }
 
-    /// Propagates client nodes state given a probability to a random node, which cannot be a client.
     pub fn disseminate_client(&mut self) {
         let mut rng = rand::thread_rng();
-        for i in 0..self.clis.len() {
-            while rng.gen_range(0.0..1.0) <= self.disseminate_prob {
+
+        for (i, cli) in self.clis.iter_mut().enumerate() {
+            let pos: usize = self.associated_server[i].try_into().unwrap();
+            let server: &mut Handoff<i32> = self.servers.get_mut(pos).unwrap();
+            C2T!(MERGE, server, cli);
+            // Server sends information back if it doesnt fail.
+            if !rng.gen_bool(self.fail_prob) {
+                C2T!(MERGE, cli, server);
+            } else {
                 let random_index = rng.gen_range(0..self.servers.len());
-                let random_h = self.servers.get_mut(random_index).unwrap();
-                C2T!(MERGE, random_h, self.clis[i]);
+                self.associated_server[i] = random_index.try_into().unwrap();
             }
         }
     }
 
     pub fn disseminate_server(&mut self) {
         let mut rng = rand::thread_rng();
-        let servers_clone = self.servers.clone();
-        for i in 0..self.servers.len() {
-            while rng.gen_range(0.0..1.0) <= self.disseminate_prob {
-                let random_index = rng.gen_range(0..self.servers.len());
-                let random_h: &mut Handoff<i32>;
-                let id = format!("{}", self.servers[i].id);
-                // Propagate to client.
-                if rng.gen_range(0..=1) == 1 {
-                    random_h = self.clis.get_mut(random_index).unwrap();
+        let servers_size = self.servers.len();
+        for i in 0..servers_size {
+            while rng.gen_bool(self.disseminate_prob) {
+                let servers_clone = self.servers.clone();
+                let random_index = rng.gen_range(0..servers_size);
+                // Server cannot propagate to itself.
+                if random_index == i {
+                    return;
                 }
-                // Propagate to server.
-                else {
-                    // Server cannot propagate to itself.
-                    if random_index == i {
-                        return;
-                    }
-                    random_h = self.servers.get_mut(random_index).unwrap();
-                }
-
+                let random_h = &mut self.servers[random_index];
                 C2T!(MERGE, random_h, servers_clone[i]);
             }
         }
@@ -170,47 +191,51 @@ impl Tester {
         }
     }
 
-    /// Returns true case the states are correct, and false otherwise.
-    pub fn verify(&mut self) -> bool {
-
-
-        // Sync with user.
-        for _ in 0..6 {
-            for cli in self.clis.iter_mut() {
-                for server in self.servers.iter_mut() {
-                    C2T!(MERGE, server, cli);
-                    C2T!(MERGE, cli, server);
-                }
+    pub fn sync_clis_servers(&mut self) {
+        for cli in self.clis.iter_mut() {
+            for server in self.servers.iter_mut(){
+                C2T!(MERGE, server, cli);
+                C2T!(MERGE, cli, server);
             }
         }
+    }
 
-        for i in 0..self.clis.len(){
-            self.activate_peculiarity(i);
-        }
-
-        // Sync with user.
-        for _ in 0..6 {
-            for cli in self.clis.iter_mut() {
-                for server in self.servers.iter_mut() {
-                    C2T!(MERGE, server, cli);
-                    C2T!(MERGE, cli, server);
-                }
-            }
-        }
-
+    pub fn sync_servers(&mut self) {
         // Sync between servers.
         let server_size = self.servers.len();
-        for _ in 0..3 {
-            for server_2 in 0..server_size {
-                let server_clone = self.servers[server_2].clone();
-                for server in self.servers.iter_mut() {
+        for server_2 in 0..server_size {
+            let server_clone = self.servers[server_2].clone();
+            for (i, server) in self.servers.iter_mut().enumerate() {
+                if server_2 != i {
                     C2T!(MERGE, server, server_clone);
                 }
             }
         }
+    }
 
 
+    /// Returns true case the states are correct, and false otherwise.
+    pub fn verify(&mut self) -> bool {
+        for i in 0..4 {
+            // send remaining tokens.
+            self.sync_clis_servers();
 
+            // Synchronize between servers.
+            self.sync_servers();
+
+            self.sync_clis_servers();
+
+            // Activate peculiarities
+            for i in 0..self.clis.len() {
+                self.activate_peculiarity(i);
+            }
+
+            self.sync_clis_servers();
+
+            self.sync_clis_servers();
+        }
+
+        // =========================================
         // Check peculiarity activations
         println!("VERIFY PECULIARITY");
         for i in 0..self.peculiarity.len() {
