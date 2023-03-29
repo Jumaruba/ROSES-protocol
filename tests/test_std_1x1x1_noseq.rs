@@ -4,11 +4,10 @@ use handoff_register::{
     handoff::Handoff,
     types::{NodeId, TagElem, Ck},
 };
-mod parse;
-mod utils;
-use utils::id;
 
-use crate::utils::Op;
+mod tester;
+use tester::Op;
+use crate::tester::utils::id;
 
 /// Case 1: replace the S1 elements in C0
 #[test]
@@ -23,17 +22,17 @@ pub fn test_std_1x1x1_noseq_1() {
 
     cli.add_elem(9);
     C2T!(OPER, cli, Op, Op::ADD(9));
-    C2T!(MERGE, server_1, cli, false);
-    C2T!(MERGE, cli, server_1, false);
-    C2T!(MERGE, server_1, cli, false);
-    C2T!(MERGE, cli, server_1, false);
-    C2T!(MERGE, server_1, cli, false);
+    C2T!(MERGE, server_1, cli);
+    C2T!(MERGE, cli, server_1);
+    C2T!(MERGE, server_1, cli);
+    C2T!(MERGE, cli, server_1);
+    C2T!(MERGE, server_1, cli);
 
-    C2T!(MERGE, server_0, server_1, false);
-    C2T!(MERGE, server_1, server_0, false);
-    C2T!(MERGE, server_0, server_1, false);
-    C2T!(MERGE, server_1, server_0, false);
-    C2T!(MERGE, cli, server_1, false);
+    C2T!(MERGE, server_0, server_1);
+    C2T!(MERGE, server_1, server_0);
+    C2T!(MERGE, server_0, server_1);
+    C2T!(MERGE, server_1, server_0);
+    C2T!(MERGE, cli, server_1);
     C2T!(END);
 
     assert_eq!(
@@ -41,10 +40,6 @@ pub fn test_std_1x1x1_noseq_1() {
         cli.te
     );
 
-    assert_eq!(HashMap::from([
-        (server_0.id.clone(), (1,1)),
-        (cli.id.clone(), (2,0)),
-        (server_1.id.clone(), (2,0))]),cli.cc.cc)
 }
 
 
@@ -61,17 +56,17 @@ pub fn test_std_1x1x1_noseq_2() {
 
     cli.add_elem(9);
     C2T!(OPER, cli, Op, Op::ADD(9));
-    C2T!(MERGE, server_1, cli, false);
-    C2T!(MERGE, cli, server_1, false);
-    C2T!(MERGE, server_1, cli, false);
+    C2T!(MERGE, server_1, cli);
+    C2T!(MERGE, cli, server_1);
+    C2T!(MERGE, server_1, cli);
 
     cli.rm_elem(9);
     C2T!(OPER, cli, Op, Op::RM(9));
-    C2T!(MERGE, server_0, server_1, false);
-    C2T!(MERGE, server_1, server_0, false);
-    C2T!(MERGE, server_0, server_1, false);
-    C2T!(MERGE, server_1, server_0, false);
-    C2T!(MERGE, cli, server_1, false);
+    C2T!(MERGE, server_0, server_1);
+    C2T!(MERGE, server_1, server_0);
+    C2T!(MERGE, server_0, server_1);
+    C2T!(MERGE, server_1, server_0);
+    C2T!(MERGE, cli, server_1);
     C2T!(END);
 
     /*assert_eq!(

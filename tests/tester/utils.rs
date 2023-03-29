@@ -3,9 +3,8 @@ use crdt_sample::AworsetOpt;
 use handoff_register::{handoff::Handoff, types::NodeId};
 use rand::seq::SliceRandom;
 use rand::Rng;
-use std::fmt::{Debug, Display};
-use std::hash::Hash;
-use Op::{ADD, RM};
+use std::fmt::{Debug};
+use super::{op::Op::{ADD, RM}, Op};
 
 // DISPLAY ================================================
 pub fn show_blue(oper: &str, h: &Handoff<i32>) {
@@ -21,12 +20,6 @@ pub fn id(id: &str) -> NodeId {
 }
 
 // RANDOM TESTS ===========================================
-#[derive(Eq, PartialEq, Hash, Clone, Debug)]
-pub enum Op<E: Eq + Clone + Hash + Debug + Display> {
-    RM(E),
-    ADD(E),
-}
-
 /// Applies an operation to aworset.
 pub fn apply_aworset_op(aworset_opt: &mut AworsetOpt<i32>, oper: Op<i32>) {
     match oper {

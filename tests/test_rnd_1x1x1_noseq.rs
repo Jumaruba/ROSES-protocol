@@ -1,12 +1,18 @@
-
-use std::collections::HashSet;
-
+use std::collections::{HashMap, HashSet};
+use crate::tester::utils::apply_handoff_op;
+use crate::tester::utils::apply_aworset_op;
+use crate::tester::utils::gen_rnd_opers;
 use crdt_sample::AworsetOpt;
-use handoff_register::{handoff::Handoff, types::NodeId};
-mod utils; 
+use handoff_register::{
+    handoff::Handoff,
+    types::{NodeId, TagElem, Ck},
+};
+mod tester;
 use rand::Rng;
-use utils::{id, gen_rnd_opers, Op, apply_handoff_op, apply_aworset_op};
-mod parse; 
+use tester::Op;
+use crate::tester::utils::id;
+
+
 
 macro_rules! n_oper {() => {10}} // Each has this number of operations to perform
 macro_rules! n_tests { () => {10} }
@@ -26,18 +32,18 @@ pub fn propagate(cli: &mut Handoff<i32> , server_s: &mut Handoff<i32>, server_t:
     let mut rng = rand::thread_rng(); 
     // Client propagates
     if rng.gen_range(0..10) <= 5 {
-        C2T!(MERGE, server_s, cli, false);
+        C2T!(MERGE, server_s, cli);
     } else {
         // Server sends state. 
-        C2T!(MERGE, cli, server_s, false);
+        C2T!(MERGE, cli, server_s);
     }
 
     // Server S propagates. 
     if rng.gen_range(0..10) <= 5 {
-        C2T!(MERGE, server_t, server_s, false);
+        C2T!(MERGE, server_t, server_s);
     } else {
         // Server t propagates. 
-        C2T!(MERGE, server_s, server_t, false);
+        C2T!(MERGE, server_s, server_t);
     }
 
 }
@@ -46,13 +52,13 @@ pub fn sync(cli: &mut Handoff<i32> , server_s: &mut Handoff<i32>, server_t: &mut
 
     C2T!(START_SYNC, cli, server_t);
     for _ in 0..5{
-        C2T!(MERGE, server_s, cli, false);
-        C2T!(MERGE, cli, server_s, false);
+        C2T!(MERGE, server_s, cli);
+        C2T!(MERGE, cli, server_s);
     }
 
     for _ in 0..5{
-        C2T!(MERGE, server_t, server_s, false);
-        C2T!(MERGE, server_s, server_t, false);
+        C2T!(MERGE, server_t, server_s);
+        C2T!(MERGE, server_s, server_t);
     }
     
     C2T!(END_SYNC);

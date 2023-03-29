@@ -3,14 +3,11 @@
 use crdt_sample::AworsetOpt;
 use handoff_register::handoff::Handoff;
 use handoff_register::types::NodeId;
-use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::HashSet;
-mod utils;
-use utils::Op;
-use utils::Op::{ADD, RM};
-
-use utils::{apply_aworset_op, apply_handoff_op, gen_rnd_opers, id, HandoffWrapper};
+mod tester;
+use tester::Op;
+use tester::utils::{apply_aworset_op, apply_handoff_op, gen_rnd_opers, id, HandoffWrapper};
 
 macro_rules! n_client_nodes {
     () => {

@@ -3,10 +3,10 @@ use std::collections::HashSet;
 
 use crdt_sample::AworsetOpt;
 use handoff_register::handoff::Handoff;
-mod utils; 
 use rand::Rng;
-use utils::{id, gen_rnd_opers, Op, apply_handoff_op, apply_aworset_op};
-mod parse;
+mod tester;
+use tester::Op;
+use tester::utils::{id, gen_rnd_opers, apply_handoff_op, apply_aworset_op};
 
 macro_rules! n_oper {() => {10}} // Each has this number of operations to perform
 macro_rules! n_tests { () => {1000} }
@@ -25,11 +25,11 @@ pub fn new_operation(cli: &mut Handoff<i32>, opers: &mut Vec<Op<i32>>, curr_stat
 pub fn apply_step(cli: &mut Handoff<i32> , server: &mut Handoff<i32>, curr_step: &mut i32) { 
     // Send to server 
     if *curr_step % 2 == 0 {
-        C2T!(MERGE, server, cli, false);
+        C2T!(MERGE, server, cli);
         *curr_step -=1; 
     } // Receive from server 
     else {
-        C2T!(MERGE, cli, server, false);
+        C2T!(MERGE, cli, server);
         *curr_step-= 1; 
     }
 

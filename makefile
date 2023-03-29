@@ -5,7 +5,7 @@ target = test_std_1x1x1_noseq_2
 
 test:
 	@echo "Running test..."
-	@cargo test $(target) > output
+	@cargo test $(target) -- --show-output > output
 
 graph:
 	@echo "Cleaning output..."
