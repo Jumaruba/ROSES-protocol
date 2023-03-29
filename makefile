@@ -1,11 +1,11 @@
 .PHONY: graph clean
 all: test graph code
 
-target = test_rnd_1x1x1_noseq
+target = test_rnd_1xn_noseq
 
 test:
 	@echo "Running test..."
-	@cargo test $(target) > output
+	@cargo test $(target) -- --show-output > output
 
 graph:
 	@echo "Cleaning output..."
