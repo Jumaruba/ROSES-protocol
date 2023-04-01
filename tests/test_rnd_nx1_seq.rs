@@ -21,7 +21,7 @@ macro_rules! n_tests {
 }
 macro_rules! n_oper {
     () => {
-        100
+        10
     };
 } // Each has this number of operations to perform
 

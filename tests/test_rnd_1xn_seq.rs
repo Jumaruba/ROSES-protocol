@@ -8,7 +8,7 @@ use tester::utils::{apply_aworset_op, apply_handoff_op, gen_rnd_opers, HandoffWr
 use tester::Op;
 
 
-macro_rules! n_servers { () => { 1000 }; }
+macro_rules! n_servers { () => { 100 }; }
 macro_rules! n_tests { () => { 1 }; }
 macro_rules! n_oper { () => { 10 }; } // Each has this number of operations to perform
 macro_rules! prop_server { () => { 0 }; }

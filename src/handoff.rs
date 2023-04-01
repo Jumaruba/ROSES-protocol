@@ -189,18 +189,19 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn fill_slots(&mut self, other: &Self) {
         for ((src, dst), (ck, n, elems)) in other.tokens.iter() {
-            if *dst == self.id
-                && self.slots.contains_key(&src)
-                && self.slots[&src].sck == ck.sck
-                && !self.has_translation(&Dot::new(src.clone(), ck.sck, *n))
+            if *dst == self.id 
             {
-                self.insert_dot_elems(elems);
-                let curr_n = self.cc.get_cc(&self.id, self.ck.sck);
-                let target_dot = Dot::new(self.id.clone(), self.ck.sck, *n + curr_n);
-                self.cc.insert_cc(&target_dot);
-                let source_dot = Dot::new(src.clone(), ck.sck, *n);
-                self.transl.insert((source_dot, target_dot)); // Creates translation.
-                self.slots.remove(&other.id);
+                if let Some(slot_ck) = self.slots.get(&src) {
+                    if slot_ck == ck {
+                        self.insert_dot_elems(elems);
+                        let curr_n = self.cc.get_cc(&self.id, self.ck.sck);
+                        let target_dot = Dot::new(self.id.clone(), self.ck.sck, *n + curr_n);
+                        self.cc.insert_cc(&target_dot);
+                        let source_dot = Dot::new(src.clone(), ck.sck, *n);
+                        self.transl.insert((source_dot, target_dot)); // Creates translation.
+                        self.slots.remove(&src);
+                    }
+                }
             }
         }
     }
@@ -248,9 +249,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
     /// Translation is discarded when the element was already translated.
     pub fn discard_transl(&mut self, other: &Self) {
         if self.tier < other.tier {
-            /*println!("TRANSLATION {:?}", self.transl);
-            println!("OTHER {}", other);
-            println!("SELF {}", self);*/
             self.transl = self
                 .transl
                 .drain()
@@ -262,7 +260,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 })
                 .collect();
         }
-        //println!("TRANSLATION AFTER {:?}", self.transl);
     }
 
 

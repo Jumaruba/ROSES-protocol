@@ -15,7 +15,7 @@ use crate::tester::utils::id;
 
 
 macro_rules! n_oper {() => {10}} // Each has this number of operations to perform
-macro_rules! n_tests { () => {10} }
+macro_rules! n_tests { () => {1000} }
 
 pub fn new_operation(cli: &mut Handoff<i32>, opers: &mut Vec<Op<i32>>,aworset: &mut AworsetOpt<i32>) {
     let mut rng = rand::thread_rng(); 

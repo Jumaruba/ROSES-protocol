@@ -37,7 +37,7 @@ pub fn test(min: i32, max: i32, n_oper: i32) -> (HashSet<i32>, HashSet<i32>, Has
 
 #[test]
 pub fn multiple_tests() {
-    for i in 0..100 {
+    for i in 0..1000 {
         let (aworset, h0, h1) = test(0, 10, i);
         assert_eq!(aworset, h0);
         assert_eq!(aworset, h1);

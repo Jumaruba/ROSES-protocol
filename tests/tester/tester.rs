@@ -241,6 +241,8 @@ impl Tester {
         for i in 0..self.peculiarity.len() {
             if let Some(peculiarity) = self.peculiarity[i] {
                 let n_activations = self.times_peculiarity[i];
+                println!("ACTIVATIONS: {}", n_activations);
+                println!("ISSUED: {}", *self.final_elements.get(&peculiarity).unwrap_or(&0));
                 if n_activations > *self.final_elements.get(&peculiarity).unwrap_or(&0) {
                     return false;
                 }
