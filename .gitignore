@@ -3,3 +3,6 @@
 output*
 diagram.mermaid
 code.rs
+metrics.csv
+metrics
+.DS_Store

@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
+use std::str::FromStr;
 
 use crate::dotcontext::DotContext;
 use crate::types::{Ck, Dot, NodeId, TagElem};
@@ -15,7 +16,6 @@ pub struct Handoff<E: Eq + Clone + Hash + Debug + Display> {
     pub slots: HashMap<NodeId, Ck>,
     pub tokens: HashMap<(NodeId, NodeId), (Ck, i64, HashSet<TagElem<E>>)>,
     pub transl: HashSet<(Dot, Dot)>,
-    pub end_cli: bool,
 }
 
 impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
@@ -29,7 +29,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             slots: HashMap::new(),
             tokens: HashMap::new(),
             transl: HashSet::new(),
-            end_cli: false,
         }
     }
 
@@ -108,13 +107,13 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn merge(&mut self, other: &Self) {
         self.fill_slots(other); // Adds the new entries.
-        self.discard_slot(other);
-        self.create_slot(other);
-        self.discard_transl(other);
+        self.discard_slot(other);   // OK 
+        self.create_slot(other);    // OK 
+        self.discard_transl(other); // OK 
         self.translate(other);
         self.cache_transl(other);
         self.merge_vectors(other);
-        self.discard_tokens(other);
+        self.discard_tokens(other); // OK 
         self.create_token(other);
         self.cache_tokens(other);
     }
@@ -189,8 +188,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn fill_slots(&mut self, other: &Self) {
         for ((src, dst), (ck, n, elems)) in other.tokens.iter() {
-            if *dst == self.id 
-            {
+            if *dst == self.id {
                 if let Some(slot_ck) = self.slots.get(&src) {
                     if slot_ck == ck {
                         self.insert_dot_elems(elems);
@@ -277,7 +275,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 if src_t.sck == token.0.sck {
                     let range = (trg_t.n-src_t.n+1)..(trg_t.n+1);
                     range.for_each(|n| {res.cc.dc.insert(Dot::new(trg_t.id.clone(), trg_t.sck, n));});
-                    //res.cc.insert_cc(trg_t);
                     token.2.iter().for_each(|tag| {
                         let n = (trg_t.n - src_t.n) + tag.n;
                         let tag = TagElem::new(trg_t.sck, n, tag.elem.clone());
@@ -291,10 +288,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 }
             }
         }
-        // TODO: delete
-        /*if self.id.addr == "C".to_string(){
-        println!("RES {}", res);
-        }*/
         self.join(&res);
     }
 
@@ -314,19 +307,16 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn cache_transl(&mut self, other: &Self){
         if self.tier == other.tier {
-            println!("TRANSL before {:?}", self.transl);
             let transl_1: HashSet<(Dot, Dot)> = other.transl.iter().filter(|dt| {
                 // Translation was removed and should remain removed. 
                 return !(self.cc.dot_in(&dt.1) && !self.transl.contains(dt));
             }).cloned().collect();
 
             self.transl  = self.transl.iter().filter(|dt| {
-                return !(other.cc.dot_in(&dt.1) && !other.transl.contains(dt)) || !other.cc.dot_in(&dt.1);
+                return !(other.cc.dot_in(&dt.1) && !other.transl.contains(dt));
             }).cloned().collect();
 
             self.transl.extend(transl_1);
-
-            println!("TRANSL after {:?}", self.transl);
         }
     }
 
@@ -348,8 +338,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
         return false; 
     }
-
-    
 }
 
 impl<E: Eq + Clone + Hash + Debug + Display> Display for Handoff<E> {
@@ -380,3 +368,4 @@ impl<E: Eq + Clone + Hash + Debug + Display> Display for Handoff<E> {
         )
     }
 }
+

@@ -116,3 +116,23 @@ pub fn test_rm_5() {
 
 }
 
+#[test]
+pub fn test_add_1() {
+    let mut h1: Handoff<i32> = Handoff::new(NodeId::new(1, "A".to_string()), 1);
+    h1.add_elem(22);
+    let mut h0: Handoff<i32> = Handoff::new(NodeId::new(1, "B".to_string()), 0);
+
+    h0.merge(&h1); show_blue("CREATE SLOT", &h0);
+    h1.merge(&h0); show_blue("CREATE TOKEN", &h1);
+    h0.merge(&h1); show_blue("FILL SLOT", &h0);
+    h1.add_elem(3); show_red("ADD 3", &h1);
+    h1.merge(&h0); show_blue("DISCARD TOKEN", &h1);
+    h0.merge(&h1); show_blue("DISCARD TRANSLATION", &h0);
+
+    assert_eq!(HashSet::from([3,22]), h1.fetch());
+    assert_eq!(HashSet::from([22]), h0.fetch());
+
+}
+
+
+
