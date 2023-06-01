@@ -1,6 +1,8 @@
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::mem::size_of;
+
 
 use crate::types::{Dot, NodeId};
 
@@ -18,6 +20,21 @@ impl DotContext {
             cc: HashMap::new(),
             dc: HashSet::new(),
         }
+    }
+
+    pub fn get_num_bytes(&self) ->usize{
+        let mut total_size : usize = 0; 
+        for i in self.dc.iter(){
+            total_size += i.get_num_bytes();
+        }
+
+        for (key, _) in self.cc.iter(){
+            total_size += key.0.get_num_bytes(); 
+            total_size += size_of::<i64>(); 
+            total_size += size_of::<i64>(); 
+        }
+
+        total_size
     }
     /// Gets elements 
     pub fn get_cc(&mut self, id: &NodeId, sck: i64) -> i64 {

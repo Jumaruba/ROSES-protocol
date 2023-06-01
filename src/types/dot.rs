@@ -1,5 +1,7 @@
 use std::fmt::{Display, Debug};
 use std::hash::Hash;
+use std::mem::size_of;
+
 
 use super::{TagElem, NodeId};
 
@@ -17,6 +19,10 @@ impl Dot {
 
     pub fn to_tag<E: Eq + Clone + Hash + Debug + Display>(&self, elem: &E) -> TagElem<E> {
         TagElem::new(self.sck, self.n, elem.clone())
+    }
+
+    pub fn get_num_bytes(&self) -> usize{
+        return self.id.get_num_bytes() + size_of::<i64>() + size_of::<i64>(); 
     }
 }
 

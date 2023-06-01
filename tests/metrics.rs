@@ -17,27 +17,27 @@ fn apply_random_op_handoff(handoff: &mut Handoff<i32>, rng: &mut ThreadRng){
     }
 }
 
-fn apply_random_op_AworsetOpt(AworsetOpt: &mut AworsetOpt<i32>, rng: &mut ThreadRng){
+fn apply_random_op_AworsetOpt(aworsetOpt: &mut AworsetOpt<i32>, rng: &mut ThreadRng){
     let n: i32 = rng.gen_range(0..100);
     if rng.gen_bool(0.4) {
-        AworsetOpt.add(n);
+        aworsetOpt.add(n);
     } else {
-        AworsetOpt.rm(n);
+        aworsetOpt.rm(n);
     }
 }
+
 
 #[test]
 fn metrics_handoff() -> std::io::Result<()>{
     // SETUP 
-    let NTESTS = 1; 
+    let NTESTS = 10; 
     const TOTAL_TIME: i32 = 30;       
     const NOPER_TIME: i32 = 20;     // Time when it stops making operations. 
     const RESP_PROB: f64 = 0.7; 
     const MAX_OPER: i32 = 10;       // Maximum number of operations per time. 
     let n_clis: i64 = 30; 
-    let n_servers: i64 = 2; 
+    let n_servers: i64 = 10; 
 
-    let file = File::create("metrics").unwrap();
     let mut rng: ThreadRng = rand::thread_rng(); 
     let bar = ProgressBar::new((TOTAL_TIME * NTESTS).try_into().unwrap()); 
     // CC size 
@@ -122,8 +122,8 @@ fn metrics_handoff() -> std::io::Result<()>{
 
             // Calculate state size 
             for i in 0..n_clis {
-                h_vec_state_size[k as usize] += handoff_clis.get_mut(i as usize).unwrap().cc.cc.keys().len() as f64;
-                vec_state_size[k as usize] += aworset.get_mut(i as usize).unwrap().cc.cc.keys().len() as f64;
+                h_vec_state_size[k as usize] += handoff_clis.get(i as usize).unwrap().get_num_bytes() as f64;
+                vec_state_size[k as usize] += aworset.get(i as usize).unwrap().get_bytes_size() as f64;
             }
 
             bar.inc(1);

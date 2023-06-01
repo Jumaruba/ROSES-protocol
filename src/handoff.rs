@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
-use std::str::FromStr;
+use std::mem::size_of;
 
 use crate::dotcontext::DotContext;
 use crate::types::{Ck, Dot, NodeId, TagElem};
@@ -31,7 +31,39 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             transl: HashSet::new(),
         }
     }
+    pub fn get_num_bytes(&self) -> usize {
+        let mut total_size: usize = 0;
+        total_size += self.id.get_num_bytes();  // id 
+        total_size += size_of::<i32>();         // tier 
+        total_size += size_of::<i64>() * 2;     // sck, dck
+        total_size += self.cc.get_num_bytes();  // cc 
 
+        // Slots 
+        for (key, _) in self.slots.iter(){
+            total_size += key.get_num_bytes();  // key
+            total_size += size_of::<i64>() * 2; // value
+        }
+
+        // Translation size 
+        for (t1, t2) in self.transl.iter(){
+            total_size += t1.get_num_bytes(); 
+            total_size += t2.get_num_bytes(); 
+        } 
+
+        // Tokens
+        for (key, value) in self.tokens.iter(){
+            total_size += key.0.get_num_bytes(); 
+            total_size += key.1.get_num_bytes();  
+            
+            total_size += size_of::<i64>() * 3; // Ck, n 
+
+            for tag in value.2.iter(){
+                total_size += tag.get_num_bytes();
+            }
+        }
+
+        total_size 
+    }
     pub fn fetch(&self) -> HashSet<E> {
         let mut kernel_elems = self.get_te_elems();
         kernel_elems.extend(self.get_token_elems());
@@ -107,13 +139,13 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     pub fn merge(&mut self, other: &Self) {
         self.fill_slots(other); // Adds the new entries.
-        self.discard_slot(other);   // OK 
-        self.create_slot(other);    // OK 
-        self.discard_transl(other); // OK 
+        self.discard_slot(other); // OK
+        self.create_slot(other); // OK
+        self.discard_transl(other); // OK
         self.translate(other);
         self.cache_transl(other);
         self.merge_vectors(other);
-        self.discard_tokens(other); // OK 
+        self.discard_tokens(other); // OK
         self.create_token(other);
         self.cache_tokens(other);
     }
@@ -150,7 +182,6 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         }
     }
 
-
     pub fn join(&mut self, other: &Self) {
         // Intersection and elements not known by other.
         self.te = self
@@ -160,14 +191,14 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                 let new_set: HashSet<TagElem<E>> = set
                     .drain()
                     .filter(|tag| {
-                        (other.te.contains_key(&id) && other.te[&id].contains(tag)) || !other.cc.dot_in(&tag.to_dot(&id))
+                        (other.te.contains_key(&id) && other.te[&id].contains(tag))
+                            || !other.cc.dot_in(&tag.to_dot(&id))
                     })
                     .collect();
                 (id, new_set)
             })
             .filter(|(_, hash)| !hash.is_empty())
             .collect();
-
 
         // Elements known by other but not by self
         for (id, hash) in other.te.iter() {
@@ -250,17 +281,15 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             self.transl = self
                 .transl
                 .drain()
-                .filter(|(src_dot, dst_dot)|  {
+                .filter(|(src_dot, dst_dot)| {
                     if other.id == src_dot.id {
                         return !other.cc.dot_in(&dst_dot);
                     }
-                    return true; 
+                    return true;
                 })
                 .collect();
         }
     }
-
-
 
     /// Applies translatiosn that came from the other node.
     pub fn translate(&mut self, other: &Self) {
@@ -273,8 +302,10 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             if let Some(token) = self.tokens.get(&(src_t.id.clone(), trg_t.id.clone())) {
                 // Match translation and token
                 if src_t.sck == token.0.sck {
-                    let range = (trg_t.n-src_t.n+1)..(trg_t.n+1);
-                    range.for_each(|n| {res.cc.dc.insert(Dot::new(trg_t.id.clone(), trg_t.sck, n));});
+                    let range = (trg_t.n - src_t.n + 1)..(trg_t.n + 1);
+                    range.for_each(|n| {
+                        res.cc.dc.insert(Dot::new(trg_t.id.clone(), trg_t.sck, n));
+                    });
                     token.2.iter().for_each(|tag| {
                         let n = (trg_t.n - src_t.n) + tag.n;
                         let tag = TagElem::new(trg_t.sck, n, tag.elem.clone());
@@ -296,25 +327,35 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
             for ((src, dst), v) in other.tokens.iter() {
                 if *src == other.id && *dst != self.id {
                     let keys = &(src.clone(), dst.clone());
-                    let val = self.tokens.entry(keys.clone()).or_insert(v.clone()); 
+                    let val = self.tokens.entry(keys.clone()).or_insert(v.clone());
                     if val.0.sck <= v.0.sck {
                         *val = v.clone();
-                    } 
+                    }
                 }
             }
         }
     }
 
-    pub fn cache_transl(&mut self, other: &Self){
+    pub fn cache_transl(&mut self, other: &Self) {
         if self.tier == other.tier {
-            let transl_1: HashSet<(Dot, Dot)> = other.transl.iter().filter(|dt| {
-                // Translation was removed and should remain removed. 
-                return !(self.cc.dot_in(&dt.1) && !self.transl.contains(dt));
-            }).cloned().collect();
+            let transl_1: HashSet<(Dot, Dot)> = other
+                .transl
+                .iter()
+                .filter(|dt| {
+                    // Translation was removed and should remain removed.
+                    return !(self.cc.dot_in(&dt.1) && !self.transl.contains(dt));
+                })
+                .cloned()
+                .collect();
 
-            self.transl  = self.transl.iter().filter(|dt| {
-                return !(other.cc.dot_in(&dt.1) && !other.transl.contains(dt));
-            }).cloned().collect();
+            self.transl = self
+                .transl
+                .iter()
+                .filter(|dt| {
+                    return !(other.cc.dot_in(&dt.1) && !other.transl.contains(dt));
+                })
+                .cloned()
+                .collect();
 
             self.transl.extend(transl_1);
         }
@@ -331,41 +372,36 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
 
     fn has_translation(&self, dot: &Dot) -> bool {
         for (src_t, _) in self.transl.iter() {
-            if dot == src_t  {
+            if dot == src_t {
                 return true;
             }
         }
 
-        return false; 
+        return false;
     }
 }
 
 impl<E: Eq + Clone + Hash + Debug + Display> Display for Handoff<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = format!("{}, {:?}\ntier: {:?}\n", self.id,self.ck, self.tier);
+        let mut s = format!("{}, {:?}\ntier: {:?}\n", self.id, self.ck, self.tier);
         if !self.te.is_empty() {
             s.push_str(format!("elems: {:?}\n", self.te).as_str());
         }
         if !self.cc.cc.is_empty() {
-            s.push_str(format!("cc: {:?}\n",self.cc.cc).as_str());
+            s.push_str(format!("cc: {:?}\n", self.cc.cc).as_str());
         }
-        if ! self.cc.dc.is_empty(){
-            s.push_str(format!("dc: {:?}\n",self.cc.dc).as_str());
+        if !self.cc.dc.is_empty() {
+            s.push_str(format!("dc: {:?}\n", self.cc.dc).as_str());
         }
-        if ! self.slots.is_empty(){
-            s.push_str(format!("slots: {:?}\n",self.slots).as_str());
+        if !self.slots.is_empty() {
+            s.push_str(format!("slots: {:?}\n", self.slots).as_str());
         }
-        if ! self.tokens.is_empty(){
-                s.push_str(format!("tokens: {:?}\n",self.tokens).as_str());
-            }
-        if !self.transl.is_empty(){
-                s.push_str(format!("transl: {:?}\n", self.transl).as_str());
+        if !self.tokens.is_empty() {
+            s.push_str(format!("tokens: {:?}\n", self.tokens).as_str());
         }
-        write!(
-            f,
-            "{}",
-            s
-        )
+        if !self.transl.is_empty() {
+            s.push_str(format!("transl: {:?}\n", self.transl).as_str());
+        }
+        write!(f, "{}", s)
     }
 }
-

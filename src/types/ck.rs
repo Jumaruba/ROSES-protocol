@@ -1,4 +1,4 @@
-use std::fmt::{Display, Debug};
+use std::{fmt::{Display, Debug}, mem::size_of};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Ck {
@@ -9,6 +9,10 @@ pub struct Ck {
 impl Ck {
     pub fn new(sck: i64, dck: i64) -> Self {
         Self { sck, dck }
+    }
+
+    pub fn get_num_bytes(&self) -> usize {
+        return size_of::<i64>() + size_of::<i64>(); 
     }
 }
 
