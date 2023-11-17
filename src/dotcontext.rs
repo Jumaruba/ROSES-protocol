@@ -10,7 +10,7 @@ use crate::types::{Dot, NodeId};
 /// Inspired in: https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DotContext {
-    pub cc: HashMap<(NodeId, i64), i64>, // Compact Context. {(id, sck) -> tag}}. This struct makes it easier to create tokens.
+    pub cc: HashMap<NodeId, i64>, // Compact Context. {id -> tag}}. This struct makes it easier to create tokens.
     pub dc: HashSet<Dot>, // Dot cloud. Doesn't grow much, thus it's ok to be a hashset and iterate over.
 }
 
@@ -29,7 +29,7 @@ impl DotContext {
         }
 
         for (key, _) in self.cc.iter(){
-            total_size += key.0.get_num_bytes(); 
+            total_size += key.get_num_bytes(); 
             total_size += size_of::<i64>(); 
             total_size += size_of::<i64>(); 
         }
@@ -38,11 +38,11 @@ impl DotContext {
     }
     /// Gets elements 
     pub fn get_cc(&mut self, id: &NodeId, sck: i64) -> i64 {
-        *self.cc.get(&(id.clone(), sck)).unwrap_or(&0)
+        *self.cc.get(&id.clone()).unwrap_or(&0)
     }
 
     pub fn insert_cc(&mut self, dot: &Dot){
-        self.cc.insert((dot.id.clone(), dot.sck), dot.n);
+        self.cc.insert(dot.id.clone(), dot.n);
     }
 
     pub fn insert_dc(&mut self, dot: &Dot){
@@ -64,17 +64,17 @@ impl DotContext {
     pub fn makedot(&mut self, id: &NodeId, sck: i64) -> Dot {
         let n = self
             .cc
-            .entry((id.clone(), sck))
+            .entry(id.clone())
             .and_modify(|val| *val += 1)
             .or_insert(1);
-        Dot::new(id.clone(), sck, n.clone())
+        Dot::new(id.clone(), n.clone())
     }
 
     /// Joins two dot contexts.
     pub fn join(&mut self, other: &Self) {
-        for ((id, sck), on) in other.cc.iter() {
+        for (id, on) in other.cc.iter() {
             self.cc
-                .entry((id.clone(), *sck))
+                .entry(id.clone())
                 .and_modify(|sn| *sn = max(sn.clone(), on.clone()))
                 .or_insert(*on);
         }
@@ -91,7 +91,7 @@ impl DotContext {
                 .dc
                 .drain()
                 .filter(|dot| {
-                    if let Some(n) = self.cc.get_mut(&(dot.id.clone(), dot.sck)) {
+                    if let Some(n) = self.cc.get_mut(&dot.id.clone()) {
                         if *n == dot.n - 1 {
                             *n += 1;
                             repeat = true;
@@ -102,7 +102,7 @@ impl DotContext {
                         }
                     } else {
                         if dot.n == 1 {
-                            self.cc.insert((dot.id.clone(), dot.sck), 1);
+                            self.cc.insert(dot.id.clone(), 1);
                             repeat = true;
                             return false; // Do not re-add it to dc.
                         }
@@ -115,7 +115,7 @@ impl DotContext {
 
     /// Verifies if the received argument was already seen.
     pub fn dot_in(&self, d: &Dot) -> bool {
-        if let Some(val) = self.cc.get(&(d.id.clone(), d.sck)) {
+        if let Some(val) = self.cc.get(&d.id.clone()) {
             //println!("{:?}", self.cc.get(&(d.id.clone(), d.sck)));
             //println!("{:?}, {:?}", d, self.cc);
             if val >= &d.n {
@@ -128,7 +128,7 @@ impl DotContext {
 
     /// Verifies if there is information about a node.
     pub fn id_in(&self, id: &NodeId, sck: i64) -> bool {
-        if self.cc.contains_key(&(id.clone(), sck)) {
+        if self.cc.contains_key(&id.clone()) {
             return true;
         }
         for dot in self.dc.iter() {
@@ -142,7 +142,7 @@ impl DotContext {
     /// Removes id's information from the dotcontext.
     /// Entries in self.dc and self.cc are removed.
     pub fn clean_id(&mut self, id: &NodeId, sck: i64) {
-        self.cc.remove(&(id.clone(), sck));
+        self.cc.remove(&id.clone());
         self.dc = self.dc.drain().filter(|dot| dot.id != *id).collect();
     }
 }

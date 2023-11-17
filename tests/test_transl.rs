@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use handoff_register::{
     handoff::Handoff,
-    types::{Ck, Dot, NodeId, TagElem},
+    types::{Ck, TDot, NodeId, TagElem},
 };
 mod tester;
 use tester::utils::id;
@@ -17,20 +17,20 @@ pub fn transl_1() {
         (
             (Ck::new(1, 1)),
             2,
-            HashSet::from([TagElem::new(1, 2, 6), TagElem::new(1, 1, 9)]),
+            HashSet::from([TagElem::new(1, 6), TagElem::new(1, 9)]),
         ),
     )]);
 
     let mut s: Handoff<i32> = Handoff::new(id("S"), 0);
     s.slots = HashMap::from([(id("C"), Ck::new(1, 1))]);
-    s.transl = HashSet::from([(Dot::new(id("C"), 1, 2), Dot::new(id("S"), 1, 2))]);
+    s.transl = HashSet::from([(TDot::new(id("C"), 1, 2), TDot::new(id("S"), 1, 2))]);
 
     s.merge(&c2);
     c2.rm_elem(9);
     c2.merge(&s);
     s.merge(&c2);
 
-    let te = HashMap::from([(id("S"), HashSet::from([TagElem::new(1, 2, 6)]))]);
+    let te = HashMap::from([(id("S"), HashSet::from([TagElem::new(1, 6)]))]);
 
     assert_eq!(s.te, te);
     assert_eq!(c2.te, te);

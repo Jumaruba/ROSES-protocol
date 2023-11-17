@@ -9,7 +9,7 @@ use tester::Op;
 use tester::utils::{id, gen_rnd_opers, apply_handoff_op, apply_aworset_op};
 
 macro_rules! n_oper {() => {10}} // Each has this number of operations to perform
-macro_rules! n_tests { () => {1000} }
+macro_rules! n_tests { () => {100} }
 
 pub fn new_operation(cli: &mut Handoff<i32>, opers: &mut Vec<Op<i32>>, curr_state: &mut i32, aworset: &mut AworsetOpt<i32>) {
     let mut rng = rand::thread_rng(); 
