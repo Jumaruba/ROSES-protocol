@@ -57,7 +57,7 @@ pub fn prepare_merge(h: &mut HandoffWrapper, aw: &mut AworsetOpt<i32>) -> bool {
         }
         return true; // Return h so it can be merged.
     }
-    return h.state != 0 || h.h.te.get(&h.h.id).is_some() || !h.h.tokens.is_empty(); // Cannot be merged
+    return h.state != 0 || h.h.payload.get(&h.h.id).is_some() || !h.h.tokens.is_empty(); // Cannot be merged
 }
 
 

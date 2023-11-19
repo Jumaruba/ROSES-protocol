@@ -99,9 +99,9 @@ pub fn main() -> (HashSet<i32>, HashSet<i32>){
 
         if let (true, op) = prepare_merge(rnd_h, rnd_aw) {
             if rnd_h.state % 2 == 1 {
-                let elems = server.te.clone();
+                let elems = server.payload.clone();
                 server.merge(&rnd_h.h.clone());
-                let new_elems = server.te.clone();
+                let new_elems = server.payload.clone();
                 if elems != new_elems{
                     server_aw.join(&rnd_aw);
                 }

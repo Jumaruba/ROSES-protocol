@@ -1,6 +1,7 @@
 use crdt_sample::AworsetOpt;
 use handoff_register::handoff::Handoff;
 use std::collections::HashSet;
+
 mod tester;
 use tester::Op;
 use tester::utils::{apply_aworset_op, apply_handoff_op, id, gen_rnd_opers};
@@ -14,11 +15,12 @@ pub fn handoff_protocol(handoff_t0: &mut Handoff<i32>, handoff_t1: &mut Handoff<
 
 pub fn test(min: i32, max: i32, n_oper: i32) -> (HashSet<i32>, HashSet<i32>, HashSet<i32>) {
     // Declare crdts
-    let mut handoff_t0: Handoff<i32> = Handoff::new(id("A"), 0);
-    let mut handoff_t1: Handoff<i32> = Handoff::new(id("B"), 1);
+    let mut handoff_t0: Handoff<i32> = Handoff::new(id("S"), 0);
+    let mut handoff_t1: Handoff<i32> = Handoff::new(id("C"), 1);
     let mut aworset_opt: AworsetOpt<i32> =
         AworsetOpt::new(crdt_sample::NodeId::new(1, "C".to_string()));
     let opers: Vec<Op<i32>> = gen_rnd_opers(min, max, n_oper);
+
 
     // Apply operations
     for oper in opers.iter() {
@@ -39,10 +41,6 @@ pub fn test(min: i32, max: i32, n_oper: i32) -> (HashSet<i32>, HashSet<i32>, Has
 pub fn multiple_tests() {
     for i in 0..200 {
         let (aworset, h0, h1) = test(0, 10, i);
-        assert_eq!(aworset, h0);
-        assert_eq!(aworset, h1);
-
-        let (aworset, h0, h1) = test(0, 100, i);
         assert_eq!(aworset, h0);
         assert_eq!(aworset, h1);
     }

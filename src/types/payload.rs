@@ -6,12 +6,12 @@ use std::mem::size_of;
 use super::{Dot, NodeId};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct TagElem<E: Eq + Clone + Hash + Debug + Display> {
+pub struct Payload<E: Eq + Clone + Hash + Debug + Display> {
     pub n: i64,
     pub elem: E,
 }
 
-impl<E: Eq + Clone + Hash + Debug + Display> TagElem<E> {
+impl<E: Eq + Clone + Hash + Debug + Display> Payload<E> {
     pub fn new(n: i64, elem: E) -> Self {
         Self { n, elem }
     }
@@ -26,13 +26,13 @@ impl<E: Eq + Clone + Hash + Debug + Display> TagElem<E> {
     }
 }
 
-impl<E: Eq + Clone + Hash + Debug + Display> Display for TagElem<E> {
+impl<E: Eq + Clone + Hash + Debug + Display> Display for Payload<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.n, self.elem)
     }
 }
 
-impl<E: Eq + Clone + Hash + Debug + Display> Debug for TagElem<E> {
+impl<E: Eq + Clone + Hash + Debug + Display> Debug for Payload<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
     }

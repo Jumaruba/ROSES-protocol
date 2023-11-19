@@ -37,9 +37,11 @@ pub fn apply_handoff_op(handoff_t1: &mut Handoff<i32>, oper: Op<i32>) {
     match oper {
         RM(elem) => {
             handoff_t1.rm_elem(elem);
+            show_blue("RM ELEM", handoff_t1);
         }
         ADD(elem) => {
             handoff_t1.add_elem(elem);
+            show_blue("ADD ELEM", handoff_t1);
         }
     }
 }

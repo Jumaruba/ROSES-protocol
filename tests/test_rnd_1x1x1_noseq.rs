@@ -5,7 +5,7 @@ use crate::tester::utils::gen_rnd_opers;
 use crdt_sample::AworsetOpt;
 use handoff_register::{
     handoff::Handoff,
-    types::{NodeId, TagElem, Ck},
+    types::{NodeId, Payload, Ck},
 };
 mod tester;
 use rand::Rng;

@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::mem::size_of;
 
 
-use super::{TagElem, NodeId};
+use super::{Payload, NodeId};
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct Dot {
@@ -16,8 +16,8 @@ impl Dot {
         Self { id,  n }
     }
 
-    pub fn to_tag<E: Eq + Clone + Hash + Debug + Display>(&self, elem: &E) -> TagElem<E> {
-        TagElem::new(self.n, elem.clone())
+    pub fn to_tag<E: Eq + Clone + Hash + Debug + Display>(&self, elem: &E) -> Payload<E> {
+        Payload::new(self.n, elem.clone())
     } 
 
     pub fn get_num_bytes(&self) -> usize{

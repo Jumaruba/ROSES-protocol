@@ -37,7 +37,7 @@ impl DotContext {
         total_size
     }
     /// Gets elements 
-    pub fn get_cc(&mut self, id: &NodeId, sck: i64) -> i64 {
+    pub fn get_cc(&mut self, id: &NodeId) -> i64 {
         *self.cc.get(&id.clone()).unwrap_or(&0)
     }
 
