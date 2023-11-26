@@ -15,8 +15,8 @@ pub fn show_red(oper: &str, h: &Handoff<i32>) {
     cprintln!("<red,bold>[{}]</> {}", oper, h);
 }
 
-pub fn id(id: &str) -> NodeId {
-    return NodeId::new(1, id.to_string());
+pub fn id(id: &str, tier: i64) -> NodeId {
+    return NodeId::new(tier, id.to_string());
 }
 
 // RANDOM TESTS ===========================================
@@ -37,11 +37,11 @@ pub fn apply_handoff_op(handoff_t1: &mut Handoff<i32>, oper: Op<i32>) {
     match oper {
         RM(elem) => {
             handoff_t1.rm_elem(elem);
-            show_blue("RM ELEM", handoff_t1);
+            //show_blue("RM ELEM", handoff_t1);
         }
         ADD(elem) => {
             handoff_t1.add_elem(elem);
-            show_blue("ADD ELEM", handoff_t1);
+            //show_blue("ADD ELEM", handoff_t1);
         }
     }
 }

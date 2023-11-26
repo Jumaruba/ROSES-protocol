@@ -136,7 +136,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.create_slot(other);
         self.discard_transl(other);
         self.translate(other);
-        //self.cache_transl(other);
+        self.cache_transl(other);
         self.merge_vectors(other);
         self.discard_tokens(other);
         self.create_token(other);
@@ -159,7 +159,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
                         let final_dot = Dot::new(self.id.clone(), curr_n + range);
                         self.cc.insert_cc(&final_dot);
                         // Creates translation.
-                        self.transl.insert((other.id.clone(), self.id.clone()), (ck.clone(), (n_final-1, curr_n + range)));
+                        self.transl.insert((src.clone(), dst.clone()), (ck.clone(), (n_final-1, curr_n + range)));
                         self.slots.remove(&src);
                     }
                 }
@@ -213,6 +213,7 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         if other.tier >= self.tier {
             return;
         }
+
         let mut res: Handoff<E> = Handoff::new(other.id.clone(), other.tier);
         // translate tokens
         for ((src, dst), ((ck), (final_n_src, final_n_dst))) in other.transl.iter() {
@@ -250,32 +251,46 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         self.join(&res);
     }
 
-/*
+
     pub fn cache_transl(&mut self, other: &Self) {
         if self.tier == other.tier {
-            let transl_1: HashSet<(TDot, TDot)> = other
-                .transl
-                .iter()
-                .filter(|dt| {
-                    // Translation was removed and should remain removed.
-                    return !(self.cc.dot_in(&dt.1.to_dot()) && !self.transl.contains(dt));
-                })
-                .cloned()
-                .collect();
 
-            self.transl = self
-                .transl
-                .iter()
-                .filter(|dt| {
-                    return !(other.cc.dot_in(&dt.1.to_dot()) && !other.transl.contains(dt));
-                })
-                .cloned()
-                .collect();
+            let mut transl_1: HashMap<_,_> = HashMap::new();
+            for (&(ref src, ref dst), &(ck, (final_src, final_dst))) in other.transl.iter() {
+                let dot = Dot::new(dst.clone(), final_dst);
+
+                // Get the translation
+                let tuple = (Ck::new(0,0), (0,0));
+                let translation = self.transl.get(&(src.clone(),dst.clone())).unwrap_or(&tuple);
+                let has_translation = translation.0 == ck.clone() && translation.1 == (final_src, final_dst);
+
+                // Translations not known by self.
+                if !(self.cc.dot_in(&dot) && !has_translation){
+                    transl_1.insert((src.clone(),dst.clone()), (ck.clone(), (final_src, final_dst)));
+                }
+            }
+
+
+            let mut transl_2: HashMap<_,_> = self.transl.clone();
+
+            for (&(ref src, ref dst), &(ck, (final_src, final_dst))) in transl_2.iter() {
+                let dot = Dot::new(dst.clone(), final_dst);
+
+                // Get the translation
+                let tuple = (Ck::new(0,0), (0,0));
+                let translation = self.transl.get(&(src.clone(),dst.clone())).unwrap_or(&tuple);
+                let has_translation = translation.0 == ck.clone() && translation.1 == (final_src, final_dst);
+
+                // Translations not known by self.
+                if other.cc.dot_in(&dot) && !has_translation{
+                    self.transl.remove(&(src.clone(), dst.clone()));
+                }
+            }
 
             self.transl.extend(transl_1);
         }
     }
-    */
+
 
 
     pub fn merge_vectors(&mut self, other: &Self) {
@@ -309,7 +324,15 @@ impl<E: Eq + Clone + Hash + Debug + Display> Handoff<E> {
         if other.slots.contains_key(&self.id) && other.slots[&self.id].sck == self.ck.sck {
             let ck = other.slots[&self.id];
             let curr_n = self.cc.get_cc(&self.id);
-            let set = self.payload.get(&self.id).unwrap_or(&HashSet::new()).clone();
+            // Get the elements that haven't been added to a token yet.
+            // These are the ones with n > last_send_n
+            let set = self.payload
+                .get(&self.id)
+                .unwrap_or(&HashSet::new())
+                .iter()
+                .filter(|&v| v.n > self.last_send_n)
+                .cloned()
+                .collect();
             self.tokens
                 .insert((self.id.clone(), other.id.clone()), (ck, (self.last_send_n + 1, curr_n + 1), set));
             self.ck.sck += 1;

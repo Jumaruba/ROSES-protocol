@@ -25,7 +25,7 @@ macro_rules! C2T {
     (MERGE, $h1: expr, $h2: expr) => {
         // Generates code.
         println!("++ {}.merge(&{});", $h1.id, $h2.id);
-        println!("++ println!(\"{{}}\", {});", $h1.id);
+        println!("++ println!(\"{} -> {}, {{}}\", {});", $h2.id, $h1.id, $h1.id);
         // Executes merge bewtween h1 and h2.
         $h1.merge(&$h2);
 

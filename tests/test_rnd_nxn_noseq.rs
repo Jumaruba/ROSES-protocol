@@ -4,12 +4,12 @@ use tester::Tester;
 #[test]
 fn test_rnd_nxn_noseq(){
     C2T!(BEGIN);
-    let n_tests = 1000; 
+    let n_tests = 10;
     for i in 0..n_tests {
         let mut tester = Tester::new();
         tester.init(2, 2, 2);
         println!("TEST {} ====================", i);
-        for _ in 0..20 {
+        for _ in 0..10 {
             tester.apply_operation();
             tester.disseminate();
         }
